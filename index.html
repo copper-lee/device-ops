@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>器械运营平台</title>
+<!-- 本平台为单文件 HTML，数据存浏览器本地（localStorage），可选开启 GitHub Gist 云同步 -->
+<style>
+  :root{
+    --bg:#f4f6fa; --card:#ffffff; --text:#1f2430; --muted:#7b8499; --border:#e7ebf2;
+    --primary:#2563eb; --primary-d:#1d4ed8; --danger:#e2554f; --blue:#3b82f6;
+    --shadow:0 1px 3px rgba(20,30,60,.06),0 6px 18px rgba(20,30,60,.05);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+  /* ---------- 布局：侧边栏 + 主区 ---------- */
+  #app{display:flex;min-height:100vh}
+  .sidebar{width:230px;flex:0 0 230px;background:#0f172a;color:#cbd5e1;display:flex;flex-direction:column;padding:18px 12px;gap:4px;position:sticky;top:0;height:100vh}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 10px 16px;font-weight:700;color:#fff;font-size:17px}
+  .brand .logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#2563eb,#3b82f6);display:flex;align-items:center;justify-content:center}
+  .nav-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:0;color:#cbd5e1;padding:11px 12px;border-radius:10px;font-size:14.5px;cursor:pointer;font-family:inherit}
+  .nav-item:hover{background:rgba(255,255,255,.06)}
+  .nav-item.active{background:var(--primary);color:#fff}
+  .nav-item .soon{margin-left:auto;font-size:11px;color:#64748b;background:rgba(255,255,255,.08);padding:1px 7px;border-radius:999px}
+  .nav-item.active .soon{color:#dbeafe;background:rgba(255,255,255,.18)}
+  .side-foot{margin-top:auto;font-size:11.5px;color:#475569;padding:10px}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;gap:12px;padding:14px 20px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5}
+  .topbar h1{font-size:18px;margin:0;font-weight:700}
+  .topbar .sub{color:var(--muted);font-size:13px}
+  .sync-badge{margin-left:auto;font-size:12.5px;padding:5px 11px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;background:#eef2f7;color:#475569}
+  .sync-badge.sb-busy{background:#fef3c7;color:#92400e}
+  .sync-badge.sb-err{background:#fee2e2;color:#991b1b}
+  .view-wrap{padding:18px 20px 60px;max-width:1100px;width:100%}
+  .view{display:none}
+  .view.active{display:block}
+  /* ---------- 卡片 / 通用 ---------- */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+  .card.empty{color:var(--muted);text-align:center;padding:30px}
+  .item-title{font-weight:700;font-size:15.5px;margin-bottom:4px}
+  .item-sub{color:var(--muted);font-size:13px;margin:2px 0}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+  .btn{font-family:inherit;font-size:14px;border:1px solid var(--border);background:#fff;color:var(--text);padding:9px 15px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{background:#f7f9fc}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+  .btn-primary:hover{background:var(--primary-d)}
+  .btn-ghost{background:transparent}
+  .icon-btn{width:34px;height:34px;border:1px solid var(--border);background:#fff;border-radius:9px;cursor:pointer;font-size:15px;color:var(--text)}
+  .icon-btn.danger{color:var(--danger);border-color:#f3c9c7}
+  .icon-btn.sm{width:30px;height:30px;font-size:13px}
+  .edit-actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:12.5px;color:var(--muted)}
+  .settle-form{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .settle-form .field[style*="1/-1"]{grid-column:1/-1}
+  input,select,textarea{font-family:inherit;font-size:16px;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text);width:100%}
+  input.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px}
+  .tpl-list{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+  .tpl-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fafbfd}
+  .sel-hospital{font-weight:600;font-size:14.5px}
+  .meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .item-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .item-main{min-width:0}
+  .item-actions{display:flex;gap:8px;flex:0 0 auto}
+  .settle-hosp{transition:box-shadow .15s}
+  .settle-hosp:hover{box-shadow:0 2px 10px rgba(37,99,235,.12)}
+  .file-warn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12.5px;padding:8px 10px;border-radius:9px;margin-top:8px}
+  .import-preview .item-title{color:var(--primary)}
+  .tbl{width:100%;border-collapse:collapse;font-size:13px}
+  .tbl th,.tbl td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:left}
+  .tbl th{color:var(--muted);font-weight:600}
+  .tbl td[style*="right"]{text-align:right;font-variant-numeric:tabular-nums}
+  details summary{user-select:none}
+  /* 折线图容器：占满宽度、溢出隐藏，SVG 由 refitCharts 按真实宽度生成 */
+  [data-chart-box]{width:100%;overflow:hidden;display:block}
+  [data-chart-box] svg{max-width:none;flex:none;display:block}
+  .coming-soon{text-align:center;color:var(--muted);padding:50px 20px}
+  .coming-soon .big{font-size:40px;margin-bottom:10px}
+  .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;margin-left:6px;vertical-align:middle;font-weight:600}
+  .badge.danger{background:#fee2e2;color:#991b1b}
+  .badge.warn{background:#fef3c7;color:#92400e}
+  .risk-bar{height:8px;background:#eef2f7;border-radius:999px;margin-top:8px;overflow:hidden}
+  .risk-bar>i{display:block;height:100%;background:linear-gradient(90deg,#3b82f6,#2563eb)}
+  .token-status{font-size:12.5px;padding:5px 10px;border-radius:8px;display:inline-flex;align-items:center}
+  .token-status.ok{color:#166534;background:#dcfce7}
+  .token-status.err{color:#991b1b;background:#fee2e2}
+  .token-status.warn{color:#92400e;background:#fef3c7}
+  .hint{font-size:12.5px;color:var(--muted);line-height:1.6}
+  .acc{border:1px solid var(--border);border-radius:12px;margin-bottom:12px;background:#fff}
+  .acc-head{display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;font-weight:600}
+  .acc-head .chev{margin-left:auto;transition:transform .2s}
+  .acc.open .acc-head .chev{transform:rotate(90deg)}
+  .acc-body{padding:0 16px 16px;display:none}
+  .acc.open .acc-body{display:block}
+  .help-step{display:flex;gap:10px;margin:10px 0;font-size:13px}
+  .help-step .num{flex:0 0 22px;width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+  .stat .v{font-size:22px;font-weight:800;color:var(--danger);font-variant-numeric:tabular-nums}
+  .stat .k{font-size:12.5px;color:var(--muted);margin-top:2px}
+  /* 移动端：侧边栏变顶部横向滚动 */
+  @media (max-width:820px){
+    #app{flex-direction:column}
+    .sidebar{width:100%;flex:none;height:auto;position:static;flex-direction:row;overflow-x:auto;padding:10px}
+    .brand{padding:4px 8px 4px 4px;font-size:15px;white-space:nowrap}
+    .brand .logo{width:26px;height:26px}
+    .nav-item{white-space:nowrap;padding:9px 12px}
+    .side-foot{display:none}
+    .view-wrap{padding:14px 14px 50px}
+    .settle-form{grid-template-columns:1fr}
+  }
+  #toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);background:#1f2430;color:#fff;padding:10px 18px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:99}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="logo">器</span><span>器械运营平台</span></div>
+    <button class="nav-item active" data-view="overview"><span>📊</span>运营概览</button>
+    <button class="nav-item" data-view="settlements"><span>🏥</span>医院月结</button>
+    <button class="nav-item" data-view="consign"><span>📦</span>寄售库存</button>
+    <button class="nav-item" data-view="rep"><span>👤</span>业务员责任</button>
+    <button class="nav-item" data-view="settings"><span>⚙️</span>设置</button>
+    <div class="side-foot">本地数据 · 可选云同步<br>v<span id="appVer"></span></div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <h1 id="viewTitle">运营概览</h1>
+      <span class="sub" id="viewSub"></span>
+      <span class="sync-badge" id="syncBadge"><span class="sb-text">未同步</span></span>
+    </div>
+    <div class="view-wrap">
+      <section class="view active" id="view-overview"></section>
+      <section class="view" id="view-settlements"></section>
+      <section class="view" id="view-consign"></section>
+      <section class="view" id="view-rep"></section>
+      <section class="view" id="view-settings"></section>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   器械运营平台 —— 单文件版
+   已建视图：运营概览 / 医院月结 / 寄售库存 / 业务员责任 / 设置
+   复用自「个人工作台」已验证逻辑：xlsx 零依赖解析、月结聚合、内联 SVG 折线图、GitHub Gist 云同步
+   ============================================================ */
+const APP_VERSION = "2026.09.29.2";
+const STORE_KEY = "device_ops_state_v1";
+const SEED_FLAG = "device_ops_seeded";
+
+/* ---------- 工具函数 ---------- */
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function pad2(n){ return String(n).padStart(2,"0"); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+function decodeXml(s){ return String(s==null?"":s).replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&'); }
+function parseAmount(v){ if(v==null) return 0; const n=parseFloat(String(v).replace(/[￥$,\s]/g,'')); return isNaN(n)?0:n; }
+function parsePeriod(v, curYear){
+  if(v==null) return "";
+  let s=String(v).trim(); if(s==="") return "";
+  let m=s.match(/^(\d{4})(\d{2})$/); if(m) return m[1]+"-"+m[2];
+  if(/^\d{5}(\.\d+)?$/.test(s)){ const d=new Date((parseFloat(s)-25569)*86400000); if(!isNaN(d)) return d.getFullYear()+"-"+pad2(d.getMonth()+1); }
+  s=s.replace(/年/g,'-').replace(/月/g,'').replace(/[\/\.]/g,'-');
+  m=s.match(/(\d{4})-(\d{1,2})/); if(m) return m[1]+"-"+pad2(parseInt(m[2],10));
+  m=s.match(/^(\d{1,2})$/); if(m) return curYear+"-"+pad2(parseInt(m[1],10));
+  return "";
+}
+function colLetterToIdx(ref){ let s=''; for(const ch of String(ref||"")){ if(/[A-Za-z]/.test(ch)) s+=ch; else break; } let n=0; for(const ch of s.toUpperCase()){ n=n*26+(ch.charCodeAt(0)-64); } return n-1; }
+function bytesToB64(u8){ let s=''; const chunk=0x8000; for(let i=0;i<u8.length;i+=chunk){ s+=String.fromCharCode.apply(null, u8.subarray(i,i+chunk)); } return btoa(s); }
+function toast(msg){
+  const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),1900);
+}
+
+/* ---------- xlsx / csv 零依赖解析 ---------- */
+function parseSheetXml(sxml, shared){
+  const rows=[]; const rowRe=/<row[^>]*>([\s\S]*?)<\/row>/g; let rm;
+  while((rm=rowRe.exec(sxml))){
+    const rowXml=rm[1]; const cellMap={}; let maxIdx=-1;
+    const cRe=/<c([^>]*)>([\s\S]*?)<\/c>/g; let cm;
+    while((cm=cRe.exec(rowXml))){
+      const attrs=cm[1], inner=cm[2];
+      const rM=attrs.match(/\br="([A-Za-z]+\d+)"/); if(!rM) continue;
+      const colIdx=colLetterToIdx(rM[1]);
+      const tM=attrs.match(/\bt="([^"]+)"/);
+      let val=""; const vM=inner.match(/<v>([\s\S]*?)<\/v>/); const isM=inner.match(/<is>([\s\S]*?)<\/is>/);
+      if(tM && tM[1]==="s"){ if(vM) val=shared[parseInt(vM[1],10)]||""; }
+      else if(tM && tM[1]==="inlineStr"){ const tt=(isM&&isM[1].match(/<t[^>]*>([\s\S]*?)<\/t>/)) ? isM[1].match(/<t[^>]*>([\s\S]*?)<\/t>/)[1] : ""; val=decodeXml(tt); }
+      else { if(vM) val=vM[1]; }
+      cellMap[colIdx]=val; if(colIdx>maxIdx) maxIdx=colIdx;
+    }
+    const arr=[]; for(let i=0;i<=maxIdx;i++) arr.push(cellMap[i]||"");
+    rows.push(arr);
+  }
+  return rows;
+}
+async function parseXlsxBuf(buf){
+  const bytes=new Uint8Array(buf); const dv=new DataView(buf); const entries=[]; let i=0;
+  while(i<bytes.length-4){
+    if(bytes[i]===0x50 && bytes[i+1]===0x4b && bytes[i+2]===0x03 && bytes[i+3]===0x04){
+      const method=dv.getUint16(i+8,true), compSize=dv.getUint32(i+18,true), fnLen=dv.getUint16(i+26,true), extraLen=dv.getUint16(i+28,true);
+      const name=new TextDecoder().decode(bytes.subarray(i+30,i+30+fnLen)); const dataStart=i+30+fnLen+extraLen;
+      entries.push({name,method,compSize,dataStart}); i=dataStart+compSize;
+    } else i++;
+  }
+  if(typeof DecompressionStream==="undefined") throw new Error("当前浏览器不支持 xlsx 解析，请另存为 CSV 后导入");
+  const inflate=async(u8)=>{ const ds=new DecompressionStream('deflate-raw'); const st=new Response(u8).body.pipeThrough(ds); const ab=await new Response(st).arrayBuffer(); return new Uint8Array(ab); };
+  const files={};
+  for(const e of entries){ let data; if(e.method===0) data=bytes.subarray(e.dataStart,e.dataStart+e.compSize); else data=await inflate(bytes.subarray(e.dataStart,e.dataStart+e.compSize)); files[e.name]=data; }
+  let shared=[]; if(files['xl/sharedStrings.xml']) shared=[...new TextDecoder().decode(files['xl/sharedStrings.xml']).matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(m=>decodeXml(m[1]));
+  const sheetName=Object.keys(files).find(n=>/xl\/worksheets\/sheet1\.xml$/.test(n)) || Object.keys(files).find(n=>/xl\/worksheets\/sheet\d+\.xml$/.test(n));
+  if(!sheetName) return [];
+  return parseSheetXml(new TextDecoder().decode(files[sheetName]), shared);
+}
+function parseCsv(text){
+  text=text.replace(/^﻿/,''); const rows=[]; let row=[],field='',i=0,q=false;
+  while(i<text.length){ const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){ field+='"'; i+=2; continue; } q=false; i++; continue; } field+=c; i++; continue; }
+    if(c==='"'){ q=true; i++; continue; }
+    if(c===','){ row.push(field); field=''; i++; continue; }
+    if(c==='\r'){ i++; continue; }
+    if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=''; i++; continue; }
+    field+=c; i++;
+  }
+  if(field.length||row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+
+/* ---------- 月结解析聚合 ----------
+   金额 = 金额列全部数值之和（含正负，净结算额）；产品口径 = 产品列（耗材编码）每个编码一个产品；
+   明细只内存聚合，产品维度最多保留 TOP 60，避免体积爆炸。 */
+function guessSettleCol(rows, hr, keys, needNum){
+  const hdr=Array.isArray(rows[hr])?rows[hr]:[];
+  const cand=[];
+  hdr.forEach((h,i)=>{
+    const s=String(h==null?"":h).replace(/\s/g,""); if(!s) return;
+    for(let k=0;k<keys.length;k++){ if(s.indexOf(keys[k])>=0){ cand.push({i:i,rank:k}); break; } }
+  });
+  cand.sort((a,b)=> (a.rank-b.rank) || (a.i-b.i));
+  for(const c of cand){
+    if(!needNum) return c.i;
+    let hit=0, tot=0;
+    for(let ri=hr+1; ri<Math.min(rows.length, hr+201); ri++){
+      const v=(rows[ri]||[])[c.i]; if(v==null||v==="") continue; tot++; if(!isNaN(parseFloat(v))) hit++;
+    }
+    if(tot===0 || hit/tot>=0.5) return c.i;
+  }
+  return -1;
+}
+function parseSettleByTemplate(rows, tpl){
+  const hr=(tpl.headerRow||1)-1;
+  const start=hr>=0?hr+1:0;
+  let aCol=(tpl.amountCol||0)-1;
+  if(aCol<0) aCol=guessSettleCol(rows, hr, ["小计","金额","合计"], true);
+  let pCol=(tpl.productCol||0)-1;
+  if(pCol<0) pCol=guessSettleCol(rows, hr, ["耗材编码","产品编码","物料编码","物资编码","商品编码","货物编码","编码"], false);
+  let dCol=(tpl.deptCol||0)-1;
+  if(dCol<0) dCol=guessSettleCol(rows, hr, ["科室名称","使用科室","领用科室","科室"], false);
+  const hdrArr=Array.isArray(rows[hr])?rows[hr]:[];
+  const productColName = pCol>=0 ? String(hdrArr[pCol]==null?"":hdrArr[pCol]).trim() : "";
+  let amount=0, rowCount=0, posSum=0, negSum=0; const products={};
+  let prodCount=0, deptCount=0;
+  const isNum=(c)=> c!=null && c!=="" && !isNaN(parseFloat(c));
+  if(tpl.amountMode==="totalRow"){
+    for(let ri=start; ri<rows.length; ri++){ const r=rows[ri]||[]; const line=(r||[]).join(" "); if(/合计|总计|小计/.test(line) && isNum(r[aCol])){ amount=parseAmount(r[aCol]); rowCount=1; } }
+  } else {
+    const seenP=new Set(), seenD=new Set();
+    for(let ri=start; ri<rows.length; ri++){ const r=rows[ri]||[]; if(!isNum(r[aCol])) continue; const v=parseAmount(r[aCol]); amount+=v; rowCount++;
+      if(v>=0) posSum+=v; else negSum+=v;
+      if(pCol>=0){ const k=String(r[pCol]||"").trim(); if(k){ seenP.add(k); products[k]=(products[k]||0)+v; } }
+      if(dCol>=0){ const k=String(r[dCol]||"").trim(); if(k) seenD.add(k); }
+    }
+    prodCount=seenP.size; deptCount=seenD.size;
+  }
+  const allP=Object.keys(products).map(k=>({name:k, amount:Math.round(products[k]*100)/100})).sort((a,b)=>Math.abs(b.amount)-Math.abs(a.amount));
+  const PROD_KEEP=60;
+  const prodArr=allP.slice(0, PROD_KEEP);
+  return {amount:Math.round(amount*100)/100, rowCount, posSum:Math.round(posSum*100)/100, negSum:Math.round(negSum*100)/100,
+          products:prodArr, productCount:prodCount, prodTrimmed: allP.length>PROD_KEEP, deptTotal:deptCount,
+          amountCol:aCol+1, productCol:pCol+1, deptCol:dCol+1, productColName:productColName};
+}
+function firstHeaderRow(rows){
+  for(let ri=0; ri<Math.min(10,rows.length); ri++){ const r=rows[ri]||[]; if(r.some(c=>/小计|合计|金额|医院|科室|品名|月份|期间|结算/.test(String(c||"")))) return ri; }
+  return -1;
+}
+function autoDetectTpl(rows){
+  const hr=firstHeaderRow(rows); const header=(hr>=0?rows[hr]:rows[0])||[];
+  const line=(header||[]).join(" ");
+  for(const t of state.settleTemplates){ if(t.detect && t.detect.length && t.detect.every(k=>line.indexOf(k)>=0)) return t; }
+  return null;
+}
+
+/* ---------- 折线图（内联 SVG，零依赖，按真实像素不拉伸） ---------- */
+function settleLineChart(vals, w, h, color){
+  const n=vals.length; if(!n) return "";
+  const W=Math.max(80, Math.round(w||320)), H=Math.max(30, Math.round(h||60));
+  const max=Math.max(0,...vals), min=Math.min(0,...vals), range=(max-min)||1;
+  const padX=10, padT=Math.round(H*0.12)+2, padB=Math.round(H*0.14)+2;
+  const innerW=Math.max(1, W-2*padX), innerH=Math.max(1, H-padT-padB);
+  const xAt=i=> padX + (n>1 ? (i/(n-1))*innerW : innerW/2);
+  const yAt=v=> padT + (1-((v-min)/range))*innerH;
+  const pts=vals.map((v,i)=>[xAt(i), yAt(v)]);
+  const path=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const base=(padT+innerH).toFixed(1);
+  const area=path+` L ${pts[n-1][0].toFixed(1)} ${base} L ${pts[0][0].toFixed(1)} ${base} Z`;
+  const showDots = innerW/(n-1||1) >= 12;
+  const ids="slc"+Math.random().toString(36).slice(2,8);
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="display:block">
+    <defs><linearGradient id="${ids}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${color}" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
+    </linearGradient></defs>
+    <path d="${area}" fill="url(#${ids})"/>
+    <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${showDots?pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="#fff" stroke="${color}" stroke-width="2"/>`).join(''):""}
+  </svg>`;
+}
+function refitCharts(scope){
+  const root=scope||document;
+  root.querySelectorAll("[data-chart]").forEach(el=>{
+    const holder=el.closest("[data-chart-box]")||el.parentElement; if(!holder) return;
+    const W=Math.round(holder.clientWidth||0), H=Math.round(holder.clientHeight||0);
+    if(W>0) el.innerHTML = settleLineChart(JSON.parse(el.getAttribute("data-chart")), W, H, el.getAttribute("data-color")||"#3b82f6");
+  });
+}
+function bindChartResize(scope){
+  if(typeof ResizeObserver==="undefined") return;
+  const root=scope||document;
+  root.querySelectorAll("[data-chart-box]").forEach(box=>{
+    if(box.__ro) return;
+    box.__ro=new ResizeObserver(()=>refitCharts(box.parentElement||document));
+    box.__ro.observe(box);
+  });
+}
+function chartBox(vals, h, color){
+  return `<div data-chart-box style="width:100%;height:${h}px"><div data-chart="${esc(JSON.stringify(vals))}" data-color="${color}" style="height:100%"></div></div>`;
+}
+
+/* ---------- 状态：存储 / 初始化 ---------- */
+let state=null, _snap=null, _suppressPush=false, _pushTimer=null;
+const ARRAYS=['settlements','consign'];   // 云同步按 id 并集合并的数组清单（未来模块追加至此）
+function load(){ try{ const r=localStorage.getItem(STORE_KEY); if(r) return JSON.parse(r); }catch(e){} return null; }
+function save(){
+  if(_snap){
+    let prev={}; try{ prev=JSON.parse(_snap); }catch(e){ prev={}; }
+    ARRAYS.forEach(k=>{
+      const prevMap={}; (prev[k]||[]).forEach(x=>{ if(x&&x.id) prevMap[x.id]=x; });
+      (state[k]||[]).forEach(x=>{
+        if(!x||!x.id) return;
+        const p=prevMap[x.id];
+        if(!p){ x.updatedAt=Date.now(); }
+        else { const a={...p}, b={...x}; delete a.updatedAt; delete b.updatedAt; if(JSON.stringify(a)!==JSON.stringify(b)) x.updatedAt=Date.now(); }
+      });
+    });
+  } else {
+    ARRAYS.forEach(k=> (state[k]||[]).forEach(x=>{ if(x&&!x.updatedAt) x.updatedAt=Date.now(); }));
+  }
+  state.meta = state.meta || {updatedAt:Date.now()};
+  const payload=JSON.stringify(state);
+  localStorage.setItem(STORE_KEY, payload);
+  _snap = payload;
+  if(state.settings.sync && state.settings.sync.enabled && state.settings.sync.token && state.settings.sync.gistId && !_suppressPush){
+    clearTimeout(_pushTimer);
+    _pushTimer=setTimeout(autoEnabled()?autoSync:pushSync, autoEnabled()?1500:1200);
+  }
+}
+/* 示例数据（首次打开且无本地数据时载入；与工作台互不干扰，独立存储键） */
+const SEED_DATA = {
+  settleTemplates:[{id:"gdph",name:"广东省人民医院",headerRow:1,amountCol:12,productCol:5,deptCol:2,amountMode:"sum",detect:["小计(元)","记账明细单号","科室名称"]}],
+  settlements:[
+    {id:"seed_1",hospital:"广东省人民医院",period:"2026-06",amount:980000.5,rowCount:3200,productCount:46,products:[{name:"842014",amount:146832},{name:"842020",amount:98000}],fileId:"",created:Date.now()},
+    {id:"seed_2",hospital:"广东省人民医院",period:"2026-07",amount:1020000.75,rowCount:3510,productCount:47,products:[{name:"842014",amount:152000}],fileId:"",created:Date.now()},
+    {id:"seed_3",hospital:"中山大学附属第一医院",period:"2026-07",amount:560000.2,rowCount:1800,productCount:30,products:[],fileId:"",created:Date.now()}
+  ],
+  settleFiles:{},
+  consignTemplates:[{id:"gdph_c",name:"广东省人民医院",headerRow:1,codeCol:1,qtyCol:3,priceCol:4,inboundCol:5,expiryCol:6,moveCol:7,ownerCol:8,amountMode:"qtyPrice",detect:["耗材编码","效期","入库"]}],
+  consign:[
+    {id:"seed_c1",hospital:"广东省人民医院",period:"2026-08",productCode:"842014",productName:"血管支架",batch:"B2025-01",quantity:50,unitPrice:3000,amount:150000,inboundDate:"2024-09-10",expiryDate:"2026-11-30",lastMoveDate:"2026-02-10",owner:"张明",fileId:"",created:Date.now()},
+    {id:"seed_c2",hospital:"广东省人民医院",period:"2026-08",productCode:"842020",productName:"导引导管",batch:"B2026-12",quantity:30,unitPrice:1800,amount:54000,inboundDate:"2026-03-15",expiryDate:"2027-06-30",lastMoveDate:"2026-08-01",owner:"张明",fileId:"",created:Date.now()},
+    {id:"seed_c3",hospital:"中山大学附属第一医院",period:"2026-07",productCode:"900123",productName:"介入弹簧圈",batch:"B2024-08",quantity:20,unitPrice:5000,amount:100000,inboundDate:"2025-01-20",expiryDate:"2026-10-15",lastMoveDate:"2026-03-01",owner:"李华",fileId:"",created:Date.now()},
+    {id:"seed_c4",hospital:"中山大学附属第一医院",period:"2026-07",productCode:"900456",productName:"栓塞微球",batch:"B2026-05",quantity:12,unitPrice:2600,amount:31200,inboundDate:"2026-06-01",expiryDate:"2028-01-01",lastMoveDate:"2026-09-01",owner:"李华",fileId:"",created:Date.now()}
+  ],
+  consignFiles:{},
+  settings:{sync:{enabled:false,token:"",gistId:"",auto:true,updatedAt:0}},
+  meta:{updatedAt:Date.now()}
+};
+function initState(){
+  state = load();
+  if(!state){
+    if(SEED_DATA && !localStorage.getItem(SEED_FLAG)){
+      state = JSON.parse(JSON.stringify(SEED_DATA));
+      localStorage.setItem(SEED_FLAG,"1");
+    } else {
+      state = { settleTemplates:[], settlements:[], settleFiles:{}, settings:{sync:{enabled:false,token:"",gistId:"",auto:true,updatedAt:0}}, meta:{updatedAt:Date.now()} };
+      if(!localStorage.getItem(SEED_FLAG)) localStorage.setItem(SEED_FLAG,"1");
+    }
+  }
+  if(!state.settings) state.settings={sync:{enabled:false,token:"",gistId:"",auto:true,updatedAt:0}};
+  if(!state.settings.sync) state.settings.sync={enabled:false,token:"",gistId:"",auto:true,updatedAt:0};
+  if(!Array.isArray(state.settlements)) state.settlements=[];
+  if(!state.settleFiles || typeof state.settleFiles!=="object") state.settleFiles={};
+  if(!Array.isArray(state.settleTemplates) || !state.settleTemplates.length){
+    state.settleTemplates=[{id:"gdph",name:"广东省人民医院",headerRow:1,amountCol:12,productCol:5,deptCol:2,amountMode:"sum",detect:["小计(元)","记账明细单号","科室名称"]}];
+  }
+  if(!Array.isArray(state.consign)) state.consign=[];
+  if(!state.consignFiles || typeof state.consignFiles!=="object") state.consignFiles={};
+  if(!Array.isArray(state.consignTemplates)) state.consignTemplates=[];
+}
+
+/* ---------- 医院月结：视图状态 ---------- */
+let settleImportPanel=null, settleTplManage=false, settleTplEdit=null, settleSelHospital=null;
+let editing={};
+
+function bindItemEvents(root){
+  root.querySelectorAll("[data-cancel]").forEach(el=>{
+    el.onclick=()=>{ const k=el.getAttribute("data-cancel"); if(k && editing[k]!==undefined) delete editing[k]; renderAll(); };
+  });
+}
+
+/* ---------- 医院月结：模板编辑器 ---------- */
+function renderTplEditor(){
+  const te=settleTplEdit||{name:"",headerRow:1,amountCol:"",productCol:"",deptCol:"",amountMode:"sum",detect:""};
+  return `<div class="card" style="margin-top:10px">
+    <div class="item-title">${te.id?"编辑":"新增"}医院月结模板</div>
+    <div class="settle-form">
+      <div class="field"><label>医院名称</label><input id="tpl-name" value="${esc(te.name)}" placeholder="如：广东省人民医院"></div>
+      <div class="field"><label>表头所在行</label><input id="tpl-headerRow" type="number" value="${te.headerRow||1}" placeholder="默认 1"></div>
+      <div class="field"><label>金额列</label><input id="tpl-amountCol" value="${esc(te.amountCol)}" placeholder="如 L 或 12，留空自动识别"></div>
+      <div class="field"><label>产品列</label><input id="tpl-productCol" value="${esc(te.productCol||"")}" placeholder="耗材编码所在列，如 E 或 5"></div>
+      <div class="field"><label>科室列</label><input id="tpl-deptCol" value="${esc(te.deptCol||"")}" placeholder="如 B 或 2，可留空"></div>
+      <div class="field"><label>取值方式</label><select id="tpl-amountMode"><option value="sum" ${te.amountMode!=="totalRow"?"selected":""}>把这个列的数字全部加起来，含退库负数</option><option value="totalRow" ${te.amountMode==="totalRow"?"selected":""}>只取「合计 / 总计」那一行的值</option></select></div>
+      <div class="field" style="grid-column:1/-1"><label>识别关键词</label><input id="tpl-detect" value="${esc(Array.isArray(te.detect)?te.detect.join("，"):te.detect||"")}" placeholder="小计(元)，记账明细单号"></div>
+      <div class="field" style="grid-column:1/-1"><div class="item-sub">列号填字母（如 L）或数字（如 12）都行。金额列留空时自动找「小计 / 金额 / 合计」列，产品列留空时自动找「耗材编码」列，识别到的列号会回填进模板，下次不用再填。</div></div>
+    </div>
+    <div class="edit-actions"><button class="btn" data-tplcancel>取消</button><button class="btn btn-primary" data-tplsave>保存模板</button></div>
+  </div>`;
+}
+function bindTplEditor(root){
+  const c=root.querySelector('[data-tplcancel]'); if(c) c.onclick=()=>{ settleTplEdit=null; renderSettlements(); };
+  const s=root.querySelector('[data-tplsave]'); if(s) s.onclick=()=>{
+    const toNum=(v)=>{ if(/^[A-Za-z]+$/.test(v)) return colLetterToIdx(v)+1; const n=parseInt(v,10); return isNaN(n)?0:n; };
+    const gv=(id)=>{ const el=document.getElementById(id); return el?String(el.value||"").trim():""; };
+    const te=settleTplEdit||{};
+    te.name=gv('tpl-name');
+    te.headerRow=Math.max(0, parseInt(gv('tpl-headerRow'),10)||1);
+    te.amountCol=toNum(gv('tpl-amountCol'));
+    te.productCol=toNum(gv('tpl-productCol'));
+    te.deptCol=toNum(gv('tpl-deptCol'));
+    te.amountMode=document.getElementById('tpl-amountMode')?document.getElementById('tpl-amountMode').value:"sum";
+    te.detect=gv('tpl-detect').split(/[\s，,]+/).map(x=>x.trim()).filter(Boolean);
+    if(!te.name){ toast("请填写医院名称"); return; }
+    if(te.id){ const i=state.settleTemplates.findIndex(t=>t.id===te.id); if(i>=0) state.settleTemplates[i]={...te}; }
+    else { te.id="tpl_"+Date.now(); state.settleTemplates.push({...te}); }
+    settleTplEdit=null; save(); renderSettlements(); toast("已保存医院模板");
+  };
+}
+
+/* ---------- 医院月结：主视图 ---------- */
+function renderSettlements(){
+  const root=document.getElementById("view-settlements"); if(!root) return;
+  const curYear=new Date().getFullYear();
+  let html=`<div class="view-head"><span class="sub">医院月结 · 导入 xlsx / csv · 本年各院月结 · 下钻各月明细</span></div>`;
+
+  if(settleImportPanel){
+    const p=settleImportPanel;
+    const tplOpts=state.settleTemplates.map(t=>`<option value="${t.id}" ${p.hospital===t.id?'selected':''}>${esc(t.name)}</option>`).join('');
+    html+=`<div class="card">
+      <div class="item-title">导入医院月结表</div>
+      <div class="settle-form">
+        <div class="field"><label>医院（选择月结模板）</label><select id="si-hosp">${tplOpts}<option value="__new__" ${p.hospital==="__new__"?"selected":""}>＋ 新增 / 编辑医院模板</option></select></div>
+        <div class="field"><label>月结期数（如 202608）</label><input id="si-per" value="${esc(p.period||"")}" placeholder="202608"></div>
+        <div class="field" style="grid-column:1/-1"><label>月结表文件（xlsx / csv）</label><input type="file" id="si-file" accept=".xlsx,.xls,.csv"></div>
+      </div>`;
+    if(p.hospital==="__new__" || !state.settleTemplates.length){ if(!settleTplEdit) settleTplEdit={name:"",headerRow:1,amountCol:"",productCol:"",deptCol:"",amountMode:"sum",detect:""}; html+=renderTplEditor(); }
+    if(p.parsed){
+      const pp=p.parsed; const mb=pp.fileBytes.length/1048576; const big=mb>2;
+      const prodUnit=pp.productColName?("（按"+esc(pp.productColName)+"）"):"";
+      const pList=(pp.products||[]);
+      html+=`<div class="card import-preview" style="margin-top:10px">
+        <div class="item-title">解析预览 · 按「${esc(pp.tplName)}」模板</div>
+        <div class="item-sub">医院：<b>${esc(pp.tplName)}</b> ｜ 月结期数：<b>${esc(pp.period)}</b> ｜ 明细行数：<b>${pp.rowCount}</b> 行</div>
+        <div class="item-sub">月结金额（金额列全部小计之和，含退库负数）：<b style="color:#e2554f;font-size:16px">¥${pp.amount.toLocaleString()}</b></div>
+        <div class="item-sub">其中正数合计 ¥${pp.posSum.toLocaleString()} ｜ 负数合计 ¥${pp.negSum.toLocaleString()}${pp.productCount?(" ｜ 产品 "+pp.productCount+" 个"+prodUnit):""}${pp.deptTotal?(" ｜ 科室 "+pp.deptTotal+" 个"):""}</div>
+        <div class="item-sub">识别到的列：金额第 ${pp.amountCol||0} 列 ｜ 产品第 ${pp.productCol||0} 列${pp.deptCol?(" ｜ 科室第 "+pp.deptCol+" 列"):""}</div>
+        <div class="item-sub">源文件：<b>${esc(pp.fileName)}</b>（${mb.toFixed(2)} MB）</div>
+        ${pp.rowCount?"":`<div class="file-warn">没有识别到任何金额行。请到「医院模板」里把这家医院的「金额列」和「表头所在行」填对，再重新选一次文件。</div>`}
+        ${big?`<div class="file-warn">这份月结表较大（${mb.toFixed(1)} MB）。附件以文本编码存进本地与云同步，容易拖慢同步、甚至撑爆浏览器存储上限，建议勾选「不保存附件」。</div>`:""}
+        ${pList.length?`<details style="margin:8px 0"><summary style="cursor:pointer;font-size:13px;color:var(--muted)">查看产品金额明细（${pp.productCount} 个，最多列 ${pList.length} 条）</summary>
+          <div style="overflow:auto;max-height:260px;margin-top:6px"><table class="tbl"><thead><tr><th>产品</th><th style="text-align:right">金额</th></tr></thead><tbody>
+          ${pList.map(x=>`<tr><td>${esc(x.name)}</td><td style="text-align:right">¥${x.amount.toLocaleString()}</td></tr>`).join('')}
+          </tbody></table></div></details>`:""}
+        <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;margin:10px 0;cursor:pointer"><input type="checkbox" id="si-noattach" style="width:16px;height:16px;flex:0 0 auto" ${(p.noAttach||big)?"checked":""}>不保存附件，只记录金额</label>
+        <div class="edit-actions"><button class="btn" data-cancel-import>取消</button><button class="btn btn-primary" data-confirm-import>确认导入</button></div>
+      </div>`;
+    }
+    html+=`</div>`;
+    root.innerHTML=html;
+    const hospSel=root.querySelector('#si-hosp'); if(hospSel) hospSel.onchange=()=>{ p.hospital=hospSel.value; p.parsed=null; if(p.hospital!=="__new__" && p.file) reparseSettle(); else if(p.hospital==="__new__"){ settleTplEdit=null; } renderSettlements(); };
+    const perIn=root.querySelector('#si-per'); if(perIn) perIn.oninput=()=>{ p.period=perIn.value.trim(); };
+    const fileIn=root.querySelector('#si-file'); if(fileIn) fileIn.onchange=(e)=>{ const f=e.target.files[0]; if(f){ p.file=f; p.parsed=null; p.noAttach=false; reparseSettle(); } };
+    const naIn=root.querySelector('#si-noattach'); if(naIn) naIn.onchange=()=>{ p.noAttach=naIn.checked; };
+    if(p.hospital==="__new__" || !state.settleTemplates.length) bindTplEditor(root);
+    const cancel=root.querySelector('[data-cancel-import]'); if(cancel) cancel.onclick=()=>{ settleImportPanel=null; renderSettlements(); };
+    const confirm=root.querySelector('[data-confirm-import]'); if(confirm) confirm.onclick=confirmSettleImport;
+    bindItemEvents(root);
+    refitCharts(root); bindChartResize(root);
+    return;
+  }
+
+  html+=`<div class="toolbar">
+    <button class="btn btn-primary" data-simport>📥 导入月结表</button>
+    <button class="btn" data-saddtoggle>＋ 手动新增</button>
+    <button class="btn" data-stplmanage>⚙ 医院模板（${state.settleTemplates.length}）</button>
+    <span class="item-sub" style="align-self:center">本年（${curYear}）</span>
+  </div>`;
+
+  if(settleTplManage){
+    html+=`<div class="card"><div class="item-title">医院月结模板</div>
+      <div class="item-sub">每家医院一套解析规则：表头行、金额列、取值方式。导入时选对应医院即按此解析。产品口径固定取「耗材编码」列（每个编码 = 一个产品）。</div>
+      <div class="tpl-list">`;
+    if(!state.settleTemplates.length) html+=`<div class="item-sub">还没有模板，点下方「新增模板」。</div>`;
+    state.settleTemplates.forEach(t=>{
+      const colName=(c)=>{
+        if(c===""||c==null||c===0||c==="0") return "—";
+        const s=String(c).trim();
+        const n=/^\d+$/.test(s) ? parseInt(s,10) : (/^[A-Za-z]+$/.test(s) ? colLetterToIdx(s)+1 : 0);
+        return n>0 ? ("第 "+n+" 列") : "—";
+      };
+      html+=`<div class="tpl-item"><div><div class="sel-hospital">${esc(t.name)}</div><div class="meta">金额列：${colName(t.amountCol)} ｜ 产品列：${colName(t.productCol)}（耗材编码） ｜ 表头：第 ${t.headerRow||1} 行 ｜ 取值：${t.amountMode==="totalRow"?"合计行":"求和该列"}${t.detect&&t.detect.length?(" ｜ 识别："+t.detect.join("/")):""}</div></div>
+        <div class="item-actions"><button class="icon-btn sm" data-tpled="${t.id}" title="编辑">✎</button><button class="icon-btn sm danger" data-tpdel="${t.id}" title="删除">✕</button></div></div>`;
+    });
+    html+=`</div><div class="edit-actions"><button class="btn" data-tplmanage-close>收起</button><button class="btn btn-primary" data-tpladd>＋ 新增模板</button></div></div>`;
+  }
+
+  if(settleTplEdit) html+=renderTplEditor();
+
+  if(editing['settleAdd']){
+    html+=`<div class="card"><div class="edit-box"><div class="settle-form">
+      <div class="field"><label>医院名称</label><input id="s-hosp" placeholder="如：省医"></div>
+      <div class="field"><label>月结月份</label><input id="s-per" type="month" value="${curYear}-01"></div>
+      <div class="field"><label>月结金额（元）</label><input id="s-amt" type="number" step="0.01" placeholder="0.00"></div>
+      <div class="edit-actions"><button class="btn" data-cancel="settleAdd">取消</button><button class="btn btn-primary" data-saddsave>保存</button></div>
+    </div></div></div>`;
+  }
+
+  const recs=state.settlements.filter(r=>r.period && r.period.indexOf(curYear+"-")===0);
+  const months=monthSum(recs);
+  const totalYear=Math.round(recs.reduce((a,r)=>a+r.amount,0)*100)/100;
+  const byHosp={}; recs.forEach(r=>{ (byHosp[r.hospital]=byHosp[r.hospital]||[]).push(r); });
+  const hospSum=(h)=>{ const a=byHosp[h]||[]; const s=a.reduce((x,r)=>x+r.amount,0); return Math.round(s*100)/100; };
+  const hospNames=Object.keys(byHosp).sort((a,b)=> hospSum(b) - hospSum(a));
+  const axis=`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px"><span>1月</span><span>6月</span><span>12月</span></div>`;
+
+  if(!recs.length){
+    html+=`<div class="card empty">还没有月结数据。点上方「导入月结表」，选择医院的 xlsx 并填月结期数（如 202608）即可；也可手动新增一条。</div>`;
+  } else {
+    html+=`<div class="card">
+      <div class="item-title">${curYear} 年总览</div>
+      <div class="item-sub">本年累计月结金额：<b style="color:#e2554f;font-size:16px">¥${totalYear.toLocaleString()}</b></div>
+      <div class="item-sub">医院 <b>${hospNames.length}</b> 家 ｜ 月结 <b>${recs.length}</b> 期</div>
+      <div style="margin-top:8px">${chartBox(months, 110, "#e2554f")}</div>
+      ${axis}
+    </div>`;
+    html+=`<div class="item-title" style="margin:14px 0 6px">各医院本年情况</div>`;
+    hospNames.forEach(h=>{
+      const hs=hospSum(h); const list=byHosp[h].slice().sort((a,b)=>a.period.localeCompare(b.period));
+      const last=list[list.length-1];
+      html+=`<div class="card settle-hosp" data-shosp="${esc(h)}" style="cursor:pointer">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <div class="item-title">${esc(h)}</div>
+          <div style="font-weight:700;color:#e2554f;white-space:nowrap">¥${hs.toLocaleString()}</div>
+        </div>
+        <div style="margin-top:6px">${chartBox(monthSum(list), 40, "#3b82f6")}</div>
+        <div class="item-sub">本年 ${list.length} 期 ｜ 最近 ${esc(last.period)}：¥${last.amount.toLocaleString()} ＞ 查看月份明细</div>
+      </div>`;
+    });
+  }
+  root.innerHTML=html;
+
+  if(settleSelHospital){
+    const h=settleSelHospital; const hs=hospSum(h); const hrs=byHosp[h]?byHosp[h].slice().sort((a,b)=>a.period.localeCompare(b.period)):[];
+    if(!hrs.length){ settleSelHospital=null; }
+    else{
+      const dh=[];
+      dh.push(`<div class="view-head"><button class="btn" data-sback>← 返回各医院</button></div>`);
+      dh.push(`<div class="card">
+        <div class="item-title">${esc(h)} · ${curYear} 年各月月结</div>
+        <div class="item-sub">本年合计：<b style="color:#e2554f;font-size:16px">¥${hs.toLocaleString()}</b> ｜ 共 ${hrs.length} 期</div>
+        <div style="margin-top:8px">${chartBox(monthSum(hrs), 150, "#3b82f6")}</div>
+        ${axis}
+      </div>`);
+      dh.push(`<div class="item-title" style="margin:14px 0 6px">月份明细</div>`);
+      hrs.slice().reverse().forEach(r=>{
+        const file=state.settleFiles[r.fileId];
+        const meta=[`月结金额：¥${r.amount.toLocaleString()}`];
+        if(r.rowCount) meta.push("明细 "+r.rowCount+" 行");
+        if(file) meta.push("附件："+file.name);
+        dh.push(`<div class="card"><div class="item-row">
+          <div class="item-main">
+            <div class="item-title">${esc(r.period)} 月结</div>
+            <div class="item-sub">${esc(meta.join(" ｜ ")).replace(/¥([\d,\.]+)/,'<b style="color:#e2554f">¥$1</b>')}</div>
+          </div>
+          <div class="item-actions">
+            ${file?'<button class="icon-btn" data-filedl="'+r.fileId+'" title="下载附件">⬇</button>':''}
+            <button class="icon-btn danger" data-sdel="${r.id}" title="删除">✕</button>
+          </div>
+        </div></div>`);
+      });
+      root.innerHTML=dh.join("");
+    }
+  }
+
+  const impBtn=root.querySelector('[data-simport]'); if(impBtn) impBtn.onclick=()=>{ settleImportPanel={hospital:"",period:""}; renderSettlements(); };
+  const tpmBtn=root.querySelector('[data-stplmanage]'); if(tpmBtn) tpmBtn.onclick=()=>{ settleTplManage=!settleTplManage; renderSettlements(); };
+  const tpmClose=root.querySelector('[data-tplmanage-close]'); if(tpmClose) tpmClose.onclick=()=>{ settleTplManage=false; renderSettlements(); };
+  const tplAdd=root.querySelector('[data-tpladd]'); if(tplAdd) tplAdd.onclick=()=>{ settleTplManage=true; settleTplEdit={name:"",headerRow:1,amountCol:"",productCol:"",deptCol:"",amountMode:"sum",detect:""}; renderSettlements(); };
+  root.querySelectorAll('[data-tpled]').forEach(b=>b.onclick=()=>{ const id=b.getAttribute('data-tpled'); const t=state.settleTemplates.find(x=>x.id===id); if(t){ settleTplManage=true; settleTplEdit={...t, detect:(t.detect||[]).join("，")}; } renderSettlements(); });
+  root.querySelectorAll('[data-tpdel]').forEach(b=>b.onclick=()=>{ const id=b.getAttribute('data-tpdel'); if(confirm("删除该医院模板？")){ state.settleTemplates=state.settleTemplates.filter(x=>x.id!==id); save(); renderSettlements(); toast("已删除模板"); } });
+  const addT=root.querySelector('[data-saddtoggle]'); if(addT) addT.onclick=()=>{ editing['settleAdd']=!editing['settleAdd']; renderSettlements(); };
+  const addS=root.querySelector('[data-saddsave]'); if(addS) addS.onclick=()=>{
+    const hosp=document.getElementById('s-hosp').value.trim(); const per=document.getElementById('s-per').value; const amt=parseAmount(document.getElementById('s-amt').value);
+    if(!hosp||!per){ toast("请填写医院和月份"); return; }
+    state.settlements.push({id:uid(), hospital:hosp, period:per, amount:amt, rowCount:0, productCount:0, products:[], fileId:"", created:Date.now()});
+    delete editing['settleAdd']; save(); renderSettlements(); toast("已新增");
+  };
+  root.querySelectorAll('[data-shosp]').forEach(b=>b.onclick=()=>{ settleSelHospital=b.getAttribute('data-shosp'); renderSettlements(); });
+  const back=root.querySelector('[data-sback]'); if(back) back.onclick=()=>{ settleSelHospital=null; renderSettlements(); };
+  root.querySelectorAll('[data-filedl]').forEach(b=>b.onclick=()=>downloadSettleFile(b.getAttribute('data-filedl')));
+  root.querySelectorAll('[data-sdel]').forEach(b=>b.onclick=()=>{ if(confirm("删除这条月结记录？")){ const id=b.getAttribute('data-sdel'); const rec=state.settlements.find(x=>x.id===id); if(rec) markTomb(id); state.settlements=state.settlements.filter(x=>x.id!==id); save(); renderSettlements(); toast("已删除"); } });
+  bindTplEditor(root);
+  refitCharts(root); bindChartResize(root);
+  bindItemEvents(root);
+}
+
+function downloadSettleFile(fileId){
+  const f=state.settleFiles[fileId]; if(!f) return;
+  let bin; try{ bin=atob(f.data); }catch(e){ toast("附件数据损坏"); return; }
+  const arr=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+  const blob=new Blob([arr], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=f.name||"月结表.xlsx"; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1500);
+}
+function confirmSettleImport(){
+  const p=settleImportPanel; if(!p || !p.parsed) return;
+  const pp=p.parsed;
+  let fid="";
+  if(!p.noAttach){ fid=uid(); state.settleFiles[fid]={name:pp.fileName, size:pp.fileBytes.length, data:pp.fileB64}; }
+  const old=state.settlements.filter(r=>r.hospital===pp.tplName && r.period===pp.period);
+  old.forEach(o=>{ if(o.id) markTomb(o.id); if(o.fileId && o.fileId!==fid && !state.settlements.some(x=>x.fileId===o.fileId)) delete state.settleFiles[o.fileId]; });
+  state.settlements=state.settlements.filter(r=>!(r.hospital===pp.tplName && r.period===pp.period));
+  state.settlements.push({id:uid(), hospital:pp.tplName, period:pp.period, amount:pp.amount,
+    rowCount:pp.rowCount||0, productCount:pp.productCount||0, products:pp.products||[], fileId:fid, created:Date.now()});
+  settleImportPanel=null; save(); renderAll();
+  toast("已导入 "+pp.tplName+" "+pp.period+" 月结 ¥"+pp.amount.toLocaleString()+(p.noAttach?"（未存附件）":""));
+}
+async function reparseSettle(){
+  const p=settleImportPanel; if(!p || !p.file) return;
+  try{
+    const buf=await p.file.arrayBuffer();
+    let rows;
+    if(p.file.name.toLowerCase().endsWith('.csv')) rows=parseCsv(new TextDecoder().decode(buf));
+    else rows=await parseXlsxBuf(buf);
+    if(!rows || !rows.length){ toast("未能解析出表格内容"); p.parsed=null; return; }
+    let tpl=state.settleTemplates.find(t=>t.id===p.hospital); let tplName=tpl?tpl.name:"";
+    if(!tpl){ tpl=autoDetectTpl(rows); tplName=tpl?tpl.name:"（未匹配模板）"; }
+    if(!tpl){ toast("未选择医院模板且无法自动识别，请在上方先选医院或新增模板"); p.parsed=null; return; }
+    if(!p.period){ toast("请填写月结期数（如 202608）"); p.parsed=null; return; }
+    const per=parsePeriod(p.period, new Date().getFullYear());
+    if(!per){ toast("月结期数格式不正确，应为 202608 或 2026-08"); p.parsed=null; return; }
+    const parsed=parseSettleByTemplate(rows, tpl);
+    parsed.tplName=tplName; parsed.tplId=tpl.id; parsed.period=per; parsed.rawPeriod=p.period;
+    let tplFilled=false;
+    if(!tpl.amountCol && parsed.amountCol){ tpl.amountCol=parsed.amountCol; tplFilled=true; }
+    if(!tpl.productCol && parsed.productCol){ tpl.productCol=parsed.productCol; tplFilled=true; }
+    if(!tpl.deptCol && parsed.deptCol){ tpl.deptCol=parsed.deptCol; tplFilled=true; }
+    if(tplFilled) save();
+    const u8=new Uint8Array(buf); parsed.fileName=p.file.name; parsed.fileB64=bytesToB64(u8); parsed.fileBytes=u8;
+    p.parsed=parsed; renderSettlements();
+    if(!parsed.rowCount) toast("没有识别到金额行：请检查模板的「金额列」和「表头所在行」");
+    else if(tplFilled) toast("已按表头识别列号：金额第 "+parsed.amountCol+" 列、产品第 "+parsed.productCol+" 列");
+  }catch(e){ console.error(e); toast("解析失败："+(e&&e.message?e.message:e)); }
+}
+
+/* ---------- 运营概览 ---------- */
+function monthSum(arr){
+  const m=Array.from({length:12},()=>0);
+  (arr||[]).forEach(r=>{ const mi=parseInt(r.period.slice(5),10); if(mi>=1&&mi<=12) m[mi-1]+=r.amount; });
+  return m.map(v=>Math.round(v*100)/100);
+}
+function renderOverview(){
+  const root=document.getElementById('view-overview'); if(!root) return;
+  const curYear=new Date().getFullYear();
+  const recs=state.settlements.filter(r=>r.period && r.period.indexOf(curYear+"-")===0);
+  const months=monthSum(recs);
+  const totalYear=Math.round(recs.reduce((a,r)=>a+r.amount,0)*100)/100;
+  const byHosp={}; recs.forEach(r=>{ (byHosp[r.hospital]=byHosp[r.hospital]||[]).push(r); });
+  const hospSum=(h)=>{ const a=byHosp[h]||[]; return Math.round(a.reduce((x,r)=>x+r.amount,0)*100)/100; };
+  const hospNames=Object.keys(byHosp).sort((a,b)=>hospSum(b)-hospSum(a));
+  const prodMap={}; recs.forEach(r=>{ (r.products||[]).forEach(p=>{ prodMap[p.name]=(prodMap[p.name]||0)+p.amount; }); });
+  const topProd=Object.keys(prodMap).map(k=>({name:k,amount:Math.round(prodMap[k]*100)/100})).sort((a,b)=>Math.abs(b.amount)-Math.abs(a.amount)).slice(0,10);
+  const axis=`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px"><span>1月</span><span>6月</span><span>12月</span></div>`;
+  let html=`<div class="view-head"><span class="sub">${curYear} 年器械运营总览</span></div>`;
+  html+=`<div class="stat-grid">
+    <div class="stat"><div class="v">¥${totalYear.toLocaleString()}</div><div class="k">本年累计月结金额</div></div>
+    <div class="stat"><div class="v">${hospNames.length}</div><div class="k">覆盖医院（家）</div></div>
+    <div class="stat"><div class="v">${recs.length}</div><div class="k">月结期数</div></div>
+  </div>`;
+  html+=`<div class="card"><div class="item-title">${curYear} 全年月结趋势</div>${chartBox(months,120,'#e2554f')}${axis}</div>`;
+  if(!hospNames.length) html+=`<div class="card empty">还没有月结数据。<a href="#" id="ov-go-settle" style="color:var(--primary)">去「医院月结」导入</a></div>`;
+  else{
+    html+=`<div class="item-title" style="margin:14px 0 6px">各医院本年合计（点击下钻月份明细）</div>`;
+    hospNames.forEach(h=>{
+      html+=`<div class="card settle-hosp" data-hosp="${esc(h)}" style="cursor:pointer">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <div class="item-title">${esc(h)}</div>
+          <div style="font-weight:700;color:#e2554f;white-space:nowrap">¥${hospSum(h).toLocaleString()}</div>
+        </div>
+        <div class="item-sub">本年 ${(byHosp[h]||[]).length} 期</div>
+      </div>`;
+    });
+    if(topProd.length){
+      html+=`<div class="item-title" style="margin:16px 0 6px">主要耗材编码 TOP ${topProd.length}（按金额，跨院合计）</div>`;
+      html+=`<div class="card"><table class="tbl"><thead><tr><th>耗材编码</th><th style="text-align:right">金额</th></tr></thead><tbody>
+        ${topProd.map(p=>`<tr><td>${esc(p.name)}</td><td style="text-align:right">¥${p.amount.toLocaleString()}</td></tr>`).join('')}
+      </tbody></table></div>`;
+    }
+  }
+  root.innerHTML=html;
+  const g=root.querySelector('#ov-go-settle'); if(g) g.onclick=(e)=>{ e.preventDefault(); goSettlements(null); };
+  root.querySelectorAll('[data-hosp]').forEach(b=>b.onclick=()=>goSettlements(b.getAttribute('data-hosp')));
+  refitCharts(root); bindChartResize(root);
+}
+function goSettlements(h){ settleSelHospital=h||null; setView('settlements'); renderSettlements(); }
+
+/* ---------- 设置：同步 + 备份 ---------- */
+function renderSettings(){
+  const root=document.getElementById('view-settings'); if(!root) return;
+  const s=state.settings.sync||{};
+  let html=`<div class="view-head"><span class="sub">设置 · 数据与同步</span></div>`;
+  html+=`<div class="acc open">
+    <div class="acc-head" data-acc-toggle><span>云端同步（GitHub Gist，仅自己跨设备）</span><span class="chev">›</span></div>
+    <div class="acc-body">
+      <div class="hint">开启后数据存进你自己的 GitHub 私人 Gist，多台设备填同一个 Token + Gist ID 即自动同步。需要 <b>Classic 个人访问令牌</b>（勾选 <b>gist</b> 权限），不支持 Fine-grained。</div>
+      <div class="settle-form" style="margin-top:10px">
+        <div class="field"><label>GitHub Classic Token</label><input id="set-sync-token" class="code" placeholder="ghp_ 开头" value="${esc(s.token||'')}" autocapitalize="off" autocomplete="off" spellcheck="false"></div>
+        <div class="field"><label>Gist ID（留空可新建）</label><input id="set-sync-gist" class="code" placeholder="留空可点右侧新建" value="${esc(s.gistId||'')}" autocapitalize="off" autocomplete="off" spellcheck="false"></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;align-items:center">
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer"><input type="checkbox" id="set-sync-on" ${s.enabled?'checked':''}> 开启同步</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer"><input type="checkbox" id="set-sync-auto" ${s.auto!==false?'checked':''}> 自动同步</label>
+        <button class="btn" id="set-gist-new">新建云端仓库</button>
+        <button class="btn" id="set-token-check">检查 Token</button>
+        <button class="btn btn-primary" id="set-sync-now">立即同步</button>
+        <span id="tokenStatus"></span>
+      </div>
+      <div style="margin-top:10px"><button class="btn btn-ghost" id="set-sync-diag">同步自检</button></div>
+      <div class="help-step" style="margin-top:12px"><div class="num">1</div><div class="body">GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token。勾选 <code>gist</code> 权限。</div></div>
+      <div class="help-step"><div class="num">2</div><div class="body">把令牌贴到上方「GitHub Classic Token」框。</div></div>
+      <div class="help-step"><div class="num">3</div><div class="body">点「新建云端仓库」自动创建私有 Gist 并开启同步；多设备填同一 Token + 同一 Gist ID 即可。</div></div>
+    </div>
+  </div>`;
+  html+=`<div class="acc">
+    <div class="acc-head" data-acc-toggle><span>数据备份</span><span class="chev">›</span></div>
+    <div class="acc-body">
+      <div class="hint">数据存于本浏览器。建议定期导出备份；换设备或清理浏览器前务必导出。</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+        <button class="btn btn-primary" id="set-export">导出 JSON 备份</button>
+        <button class="btn" id="set-import">导入恢复</button>
+        <button class="btn" id="set-clear" style="color:var(--danger);border-color:#f3c9c7">清空全部数据</button>
+        <input type="file" id="set-import-file" accept=".json" style="display:none">
+      </div>
+    </div>
+  </div>`;
+  root.innerHTML=html;
+  root.querySelectorAll('[data-acc-toggle]').forEach(t=>t.onclick=()=>t.parentElement.classList.toggle('open'));
+  const st=root.querySelector('#set-sync-token'); if(st) st.onchange=()=>{ state.settings.sync.token=st.value.trim(); save(); };
+  const sg=root.querySelector('#set-sync-gist'); if(sg) sg.onchange=()=>{ state.settings.sync.gistId=sg.value.trim(); save(); };
+  const so=root.querySelector('#set-sync-on'); if(so) so.onchange=()=>{ state.settings.sync.enabled=!!so.checked; save(); };
+  const sa=root.querySelector('#set-sync-auto'); if(sa) sa.onchange=()=>{ state.settings.sync.auto=!!sa.checked; save(); };
+  const gn=root.querySelector('#set-gist-new'); if(gn) gn.onclick=createGist;
+  const tc=root.querySelector('#set-token-check'); if(tc) tc.onclick=verifyToken;
+  const sn=root.querySelector('#set-sync-now'); if(sn) sn.onclick=syncNow;
+  const sd=root.querySelector('#set-sync-diag'); if(sd) sd.onclick=runSyncDiag;
+  const ex=root.querySelector('#set-export'); if(ex) ex.onclick=exportJSON;
+  const im=root.querySelector('#set-import'); if(im) im.onclick=()=>{ const f=root.querySelector('#set-import-file'); if(f) f.click(); };
+  const ifile=root.querySelector('#set-import-file'); if(ifile) ifile.onchange=(e)=>{ const f=e.target.files[0]; if(f) importJSON(f); };
+  const cl=root.querySelector('#set-clear'); if(cl) cl.onclick=clearAllData;
+}
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='device_ops_backup_'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500); toast('已导出备份');
+}
+function importJSON(file){
+  const r=new FileReader();
+  r.onload=()=>{ try{
+    const d=JSON.parse(r.result); if(!d||typeof d!=='object') throw new Error('格式不对');
+    if(!confirm('导入将覆盖当前所有数据，确定继续？')) return;
+    state=d;
+    if(!state.settings) state.settings={sync:{enabled:false,token:'',gistId:'',auto:true}};
+    if(!state.settings.sync) state.settings.sync={enabled:false,token:'',gistId:'',auto:true};
+    if(!Array.isArray(state.settlements)) state.settlements=[];
+    if(!state.settleFiles) state.settleFiles={};
+    if(!Array.isArray(state.settleTemplates)) state.settleTemplates=[];
+    save(); renderAll(); toast('已导入恢复');
+  }catch(e){ toast('导入失败：'+(e&&e.message?e.message:e)); } };
+  r.readAsText(file);
+}
+function clearAllData(){
+  if(!confirm('将清空本平台全部数据（医院月结、模板、设置），且无法恢复。确定？')) return;
+  localStorage.removeItem(STORE_KEY); localStorage.removeItem(SEED_FLAG);
+  state={ settleTemplates:[], settlements:[], settleFiles:{}, settings:{sync:{enabled:false,token:'',gistId:'',auto:true}}, meta:{updatedAt:Date.now()} };
+  save(); renderAll(); toast('已清空');
+}
+
+/* ---------- 壳层：视图切换 / 渲染总入口 ---------- */
+const viewMeta = {
+  overview:{t:"运营概览", s:"本年累计 · 各院合计 · 趋势"},
+  settlements:{t:"医院月结", s:"导入 xlsx · 本年各院月结 · 下钻各月明细"},
+  consign:{t:"寄售库存", s:"近效期 · 慢动销 · 长账龄 · 业务员责任"},
+  rep:{t:"业务员责任", s:"个体库存风险敞口看板"},
+  settings:{t:"设置", s:"数据与同步"}
+};
+function renderAll(){
+  const safe=(fn,n)=>{ try{ fn(); }catch(e){ console.error("[render "+n+"] 渲染失败：", e); } };
+  safe(renderOverview,"overview");
+  safe(renderSettlements,"settlements");
+  safe(renderConsign,"consign");
+  safe(renderRep,"rep");
+  safe(renderSettings,"settings");
+}
+function syncNavActive(v){
+  document.querySelectorAll(".nav-item").forEach(b=>{ const bv=b.getAttribute("data-view"); if(bv) b.classList.toggle("active", bv===v); });
+}
+function setView(v){
+  syncNavActive(v);
+  document.querySelectorAll(".view").forEach(s=>s.classList.remove("active"));
+  const el=document.getElementById("view-"+v); if(el) el.classList.add("active");
+  const t=document.getElementById("viewTitle"); if(t) t.textContent=(viewMeta[v]||{t:v}).t;
+  const su=document.getElementById("viewSub"); if(su) su.textContent=(viewMeta[v]||{s:""}).s;
+  window.scrollTo({top:0,behavior:"instant"});
+  const RM={overview:renderOverview,settlements:renderSettlements,consign:renderConsign,rep:renderRep,settings:renderSettings};
+  if(RM[v]){ try{ RM[v](); }catch(e){ console.error("[setView render "+v+"]",e); } }
+  refitCharts(document);   // 视图切换后重画图表（避免隐藏态 clientWidth=0 不绘制）
+}
+function bindNav(){
+  document.querySelectorAll(".nav-item").forEach(b=>{ b.onclick=()=>setView(b.getAttribute("data-view")); });
+}
+
+/* ---------- 云端同步（GitHub Gist，仅自己跨设备） ---------- */
+function isSyncOn(){ return !!(state.settings.sync && state.settings.sync.enabled && state.settings.sync.token && state.settings.sync.gistId); }
+function gistHeaders(){
+  const h={"Accept":"application/vnd.github+json","Content-Type":"application/json"};
+  if(state.settings.sync.token) h["Authorization"]="Bearer "+state.settings.sync.token;
+  return h;
+}
+function syncPayload(){
+  const copy=JSON.parse(JSON.stringify(state));
+  if(copy.settings && copy.settings.sync){ delete copy.settings.sync.token; delete copy.settings.sync.gistId; }
+  return JSON.stringify(copy);
+}
+function setSyncStatus(txt, kind){
+  const b=document.getElementById("syncBadge"); if(!b) return;
+  b.className="sync-badge"+(kind?(" "+kind):"");
+  const t=b.querySelector(".sb-text"); if(t) t.textContent=txt;
+}
+function syncNow(){
+  if(!isSyncOn()){ toast("请先在设置中开启并配置云端同步"); setView("settings"); return; }
+  if(_autoBusy){ toast("正在同步中，请稍候"); return; }
+  setSyncStatus("同步中…","sb-busy");
+  _autoBusy=true;
+  pullSync().then(()=>pushSync()).then(()=>{
+    setSyncStatus("已同步 "+new Date().toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}));
+    _lastSyncAt=Date.now();
+  }).catch(e=>{
+    console.error("[sync error]", e);
+    let msg=e && e.message ? e.message : String(e);
+    if(msg==="Load failed" || msg==="Failed to fetch") msg="网络请求被拦截，常见原因：广告拦截插件、公司网络限制、浏览器不允许 file:// 页面访问 api.github.com。请点「检查 Token」或按 F12 看控制台红字。";
+    setSyncStatus("同步失败","sb-err"); toast("同步失败："+msg);
+  }).finally(()=>{ _autoBusy=false; });
+}
+async function runSyncDiag(){
+  const L=[];
+  L.push("【同步自检】v"+APP_VERSION);
+  L.push("云端同步：" + (isSyncOn()? "已开启（Token + Gist 已配置）" : "未开启/未配全 → 去上面填 Token 与 Gist ID"));
+  L.push("自动同步：" + (autoEnabled()? "已开启" : "已关闭 → 需手动点「立即同步」"));
+  L.push("上次成功同步：" + (_lastSyncAt? new Date(_lastSyncAt).toLocaleString("zh-CN") : "本次打开后还没有成功同步过"));
+  L.push("同步锁：" + (_autoBusy? "占用中（若长期如此属异常，刷新页面即可恢复）" : "空闲"));
+  if(!isSyncOn()){ alert(L.join("\n")); return; }
+  try{
+    const s=state.settings.sync;
+    const res=await fetch("https://api.github.com/gists/"+encodeURIComponent(s.gistId),{headers:gistHeaders()});
+    if(!res.ok) throw new Error("HTTP "+res.status+(res.status===404?"（Token 无 gist 权限 / Gist ID 填错）":""));
+    const data=await res.json();
+    const f=data.files&&data.files["device_ops.json"];
+    if(!f||!f.content){ L.push("云端还没有数据文件（首次请点「立即同步」上传一次）"); alert(L.join("\n")); return; }
+    let remote; try{ remote=JSON.parse(f.content); }catch(e){ throw new Error("云端内容不是合法 JSON"); }
+    L.push("云端更新时间：" + ((remote.meta&&remote.meta.updatedAt)? new Date(remote.meta.updatedAt).toLocaleString("zh-CN") : "未知"));
+    L.push("—— 本机 / 云端 ——");
+    L.push("月结："+(state.settlements||[]).length+" / "+(remote.settlements||[]).length);
+    L.push("");
+    L.push("处理：本机缺的 → 点「立即同步」拉回；云端缺的 → 在改动的那一端点「立即同步」上传。");
+  }catch(e){ L.push("读取云端失败："+(e&&e.message?e.message:String(e))); }
+  alert(L.join("\n"));
+}
+let _autoBusy=false, _lastSyncAt=0;
+function autoEnabled(){ return isSyncOn() && state.settings.sync.auto!==false; }
+function userTyping(){ const a=document.activeElement; if(!a) return false; const tag=(a.tagName||"").toUpperCase(); return tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"||a.isContentEditable===true; }
+function userBusy(){ if(userTyping()) return true; try{ if(typeof editing!=="undefined" && Object.keys(editing).length>0) return true; }catch(e){} return false; }
+let _autoRetryTimer=null, _pendingAuto=false;
+function scheduleAutoRetry(delay){
+  clearTimeout(_autoRetryTimer);
+  _autoRetryTimer=setTimeout(()=>{
+    if(autoEnabled() && document.visibilityState!=="hidden") autoSync();
+    else if(autoEnabled()) flushPendingPush();
+  }, delay||5000);
+}
+async function autoSync(){
+  if(!autoEnabled() || _suppressPush) return;
+  if(_autoBusy){ _pendingAuto=true; return; }
+  if(userBusy()){ setSyncStatus("待空闲同步","sb-busy"); scheduleAutoRetry(5000); return; }
+  _autoBusy=true;
+  try{ await pullSync(); await pushSync(); _lastSyncAt=Date.now(); }
+  catch(e){ console.warn("[auto sync]", e); setSyncStatus("自动同步失败","sb-err"); scheduleAutoRetry(15000); }
+  finally{ _autoBusy=false; if(_pendingAuto){ _pendingAuto=false; setTimeout(autoSync, 800); } }
+}
+const GIST_FILE="device_ops.json";
+async function pushSync(opts){
+  if(!isSyncOn() || _suppressPush) return;
+  const s=state.settings.sync;
+  if(s.token.startsWith("github_pat_")) throw new Error("请使用 Classic Token（Fine-grained 令牌不支持 Gist）");
+  const body=JSON.stringify({description:"器械运营平台云端同步",public:false,files:{[GIST_FILE]:{content:syncPayload()}}});
+  const res=await fetch("https://api.github.com/gists/"+encodeURIComponent(s.gistId),{method:"PATCH",headers:gistHeaders(),body,keepalive: !!(opts&&opts.keepalive)});
+  if(!res.ok){ const j=await res.json().catch(()=>({})); let msg=j.message||("HTTP "+res.status); if(res.status===404 || msg==="Not Found") msg="Token 无效、无 gist 权限，或使用了 Fine-grained 令牌（需 Classic Token + gist 权限）。"; throw new Error(msg); }
+  setSyncStatus("已同步 "+new Date().toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}));
+}
+function flushPendingPush(){
+  if(_pushTimer){ clearTimeout(_pushTimer); _pushTimer=null; }
+  if(!isSyncOn() || _suppressPush) return;
+  try{ pushSync({keepalive:true}); }catch(e){ console.warn("[flush push]", e); }
+}
+function tombMap(){
+  state.meta=state.meta||{};
+  if(!state.meta.tombstones || typeof state.meta.tombstones!=="object") state.meta.tombstones={};
+  return state.meta.tombstones;
+}
+function markTomb(id){ if(id===undefined||id===null||id==="") return; tombMap()[String(id)]=Date.now(); }
+function mergeArray(local, remote, tomb){
+  const alive=(x)=>{
+    if(!x || x.id===undefined || x.id===null) return false;
+    const ts = tomb && tomb[String(x.id)];
+    return !(ts!==undefined && ts >= (x.updatedAt||0));
+  };
+  const map={};
+  (local||[]).forEach(x=>{ if(alive(x)) map[x.id]=x; });
+  (remote||[]).forEach(x=>{
+    if(!alive(x)) return;
+    const l=map[x.id];
+    if(!l){ map[x.id]=x; }
+    else { const lu=(l.updatedAt||0), ru=(x.updatedAt||0); if(ru>lu) map[x.id]=x; }
+  });
+  return Object.values(map);
+}
+const SYNC_ARRAYS=['settlements','consign'];
+async function pullSync(){
+  if(!isSyncOn()) return;
+  const s=state.settings.sync;
+  if(s.token.startsWith("github_pat_")) throw new Error("请使用 Classic Token（Fine-grained 令牌不支持 Gist）");
+  const res=await fetch("https://api.github.com/gists/"+encodeURIComponent(s.gistId),{headers:gistHeaders()});
+  if(!res.ok){ const j=await res.json().catch(()=>({})); let msg=j.message||("HTTP "+res.status); if(res.status===404 || msg==="Not Found") msg="Token 无效、无 gist 权限，或使用了 Fine-grained 令牌（需 Classic Token + gist 权限）。"; throw new Error(msg); }
+  const data=await res.json();
+  const f=data.files && data.files[GIST_FILE];
+  if(!f || !f.content) return;
+  let remote; try{ remote=JSON.parse(f.content); }catch(e){ return; }
+  const localSync=state.settings.sync;
+  const lt=tombMap();
+  const rt=(remote.meta && remote.meta.tombstones && typeof remote.meta.tombstones==="object") ? remote.meta.tombstones : {};
+  Object.keys(rt).forEach(k=>{ if(!lt[k] || rt[k]>lt[k]) lt[k]=rt[k]; });
+  let changed=false;
+  SYNC_ARRAYS.forEach(k=>{
+    const lArr=state[k]||[];
+    const merged=mergeArray(lArr, remote[k]||[], lt);
+    if(merged.length!==lArr.length || merged.some((m,i)=> m!==lArr[i])){ state[k]=merged; changed=true; }
+  });
+  state.settings=state.settings||{sync:{enabled:false,token:"",gistId:"",auto:true}};
+  state.settings.sync=Object.assign({}, state.settings.sync, localSync);
+  state.meta = state.meta || {updatedAt:Date.now()};
+  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  _snap = JSON.stringify(state);
+  if(changed) renderAll();
+}
+async function createGist(){
+  const s=state.settings.sync;
+  if(!s.token){ toast("请先填写 GitHub Token"); return; }
+  if(s.token.startsWith("github_pat_")){ toast("请使用 Classic Token（Fine-grained 令牌不支持 Gist）"); return; }
+  setSyncStatus("创建中…","sb-busy");
+  try{
+    const body=JSON.stringify({description:"器械运营平台云端同步",public:false,files:{[GIST_FILE]:{content:syncPayload()}}});
+    const res=await fetch("https://api.github.com/gists",{method:"POST",headers:gistHeaders(),body});
+    if(!res.ok){ const j=await res.json().catch(()=>({})); let msg=j.message||("HTTP "+res.status); if(res.status===404 || msg==="Not Found") msg="Token 无效、无 gist 权限，或使用了 Fine-grained 令牌（需 Classic Token + gist 权限）。"; throw new Error(msg); }
+    const data=await res.json();
+    s.gistId=data.id; s.enabled=true; save(); renderSettings();
+    setSyncStatus("已同步"); toast("已创建云端仓库并同步");
+  }catch(e){ setSyncStatus("创建失败","sb-err"); toast("创建失败："+e.message); }
+}
+async function verifyToken(){
+  const tokenInput=document.getElementById("set-sync-token");
+  const status=document.getElementById("tokenStatus");
+  const token=tokenInput ? tokenInput.value.trim() : (state.settings.sync.token||"");
+  if(!token){ if(status) status.innerHTML='<span class="token-status err">请先填写 Token</span>'; return; }
+  if(status) status.innerHTML='<span class="token-status warn">检查中…</span>';
+  try{
+    if(token.startsWith("github_pat_")) throw new Error("这是 Fine-grained 令牌，Gist 不支持。请改用 Classic Token（以 ghp_ 开头）。");
+    const res=await fetch("https://api.github.com/user",{headers:{"Accept":"application/vnd.github+json","Authorization":"Bearer "+token}});
+    const scopes=(res.headers.get("X-OAuth-Scopes")||"").split(",").map(s=>s.trim());
+    if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error(j.message||("HTTP "+res.status)); }
+    if(!scopes.includes("gist")) throw new Error("Token 有效，但缺少 gist 权限，请重新生成并勾选 gist 后再试。");
+    if(status) status.innerHTML='<span class="token-status ok">Token 有效，且已具备 gist 权限 ✓</span>';
+  }catch(e){ if(status) status.innerHTML='<span class="token-status err">'+esc(e.message)+'</span>'; }
+}
+
+/* ============================================================
+   寄售库存 + 业务员责任
+   数据：state.consign（明细，按 医院+盘点期 唯一覆盖）；state.consignTemplates（按医院解析模板）
+   风险三维度：近效期（效期剩余≤阈值）、慢动销（距上次动销≥阈值）、长账龄（入库≥阈值仍在库）
+   业务员维度：按 owner 聚合风险敞口，责任到人
+   ============================================================ */
+let consignImportPanel=null, consignTplManage=false, consignTplEdit=null;
+let consignFilter={hospital:null, owner:null};
+const RISK={ nearExpiryWarn:6, nearExpiryDanger:3, slowMove:6, longAge:12 };
+function parseYMD(s){
+  if(s==null||s==="") return null;
+  let m=String(s).match(/^(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})/);
+  if(m) return new Date(+m[1], +m[2]-1, +m[3]);
+  m=String(s).match(/^(\d{4})(\d{2})(\d{2})$/);
+  if(m) return new Date(+m[1], +m[2]-1, +m[3]);
+  return null;
+}
+function monthsBetween(fromD, toD){
+  if(!fromD||!toD||isNaN(fromD)||isNaN(toD)) return null;
+  let v=(toD.getFullYear()-fromD.getFullYear())*12+(toD.getMonth()-fromD.getMonth());
+  if(toD.getDate()<fromD.getDate()) v-=1;
+  return v;
+}
+function computeConsignRisk(it, now){
+  now=now||new Date();
+  const exp=parseYMD(it.expiryDate), mv=parseYMD(it.lastMoveDate), inb=parseYMD(it.inboundDate);
+  const expM=exp?monthsBetween(now,exp):null;
+  const mvM=mv?monthsBetween(mv,now):null;
+  const ageM=inb?monthsBetween(inb,now):null;
+  let nearExpiry=null;
+  if(expM!==null){ if(expM<=RISK.nearExpiryDanger) nearExpiry='danger'; else if(expM<=RISK.nearExpiryWarn) nearExpiry='warn'; }
+  const slowMove=(mvM!==null && mvM>=RISK.slowMove);
+  const longAge=(ageM!==null && ageM>=RISK.longAge);
+  return {expM,mvM,ageM,nearExpiry,slowMove,longAge,amount:it.amount||0};
+}
+function consignRiskSummary(items, now){
+  let nearWarn=0,nearDanger=0,slow=0,longAgeAmt=0,total=0;
+  (items||[]).forEach(it=>{ const r=computeConsignRisk(it,now); total+=r.amount; if(r.nearExpiry==='danger')nearDanger++; else if(r.nearExpiry==='warn')nearWarn++; if(r.slowMove)slow++; if(r.longAge)longAgeAmt+=r.amount; });
+  return {nearWarn,nearDanger,slow,longAgeAmt:Math.round(longAgeAmt*100)/100,total:Math.round(total*100)/100};
+}
+const CONSIGN_KEYS={
+  codeCol:["耗材编码","产品编码","物料编码","物资编码","商品编码","货物编码","编码"],
+  nameCol:["品名","产品名称","药品名称","耗材名称","商品名","名称"],
+  batchCol:["批号","批次","lot","LOT"],
+  qtyCol:["数量","库存数量","结存数量","期末数量","库存数","结存"],
+  priceCol:["单价","价格","单价(元)","单价元"],
+  amountCol:["金额","库存金额","货值","金额(元)"],
+  inboundCol:["入库日期","入库时间","到货日期","进场日期","入库"],
+  expiryCol:["效期","有效期","有效期至","失效日期","到期日","过期日期"],
+  moveCol:["最近动销","上次动销","最后出库","动销日期","最近消耗","最近销售"],
+  ownerCol:["业务员","负责人","责任人","销售员","代表","owner","业务"]
+};
+function parseConsignByTemplate(rows, tpl){
+  const hr=(tpl.headerRow||1)-1; const start=hr>=0?hr+1:0;
+  const cols={};
+  Object.keys(CONSIGN_KEYS).forEach(f=>{ let c=(tpl[f]||0)-1; if(c<0) c=guessSettleCol(rows,hr,CONSIGN_KEYS[f], f==='qtyCol'||f==='priceCol'||f==='amountCol'); cols[f]=c; });
+  const items=[]; let total=0;
+  for(let ri=start; ri<rows.length; ri++){
+    const r=rows[ri]||[];
+    const code=cols.codeCol>=0?String(r[cols.codeCol]||"").trim():(String(r[0]||"").trim());
+    if(!code) continue;
+    const qty=parseAmount(cols.qtyCol>=0?r[cols.qtyCol]:0);
+    const price=cols.priceCol>=0?parseAmount(r[cols.priceCol]):0;
+    let amount= cols.amountCol>=0? parseAmount(r[cols.amountCol]) : (qty*price);
+    const it={ id:uid(), hospital:tpl.name, period:"", productCode:code,
+      productName: cols.nameCol>=0?String(r[cols.nameCol]||"").trim():"",
+      batch: cols.batchCol>=0?String(r[cols.batchCol]||"").trim():"",
+      quantity:qty, unitPrice:Math.round(price*100)/100, amount:Math.round(amount*100)/100,
+      inboundDate: cols.inboundCol>=0?String(r[cols.inboundCol]||"").trim():"",
+      expiryDate: cols.expiryCol>=0?String(r[cols.expiryCol]||"").trim():"",
+      lastMoveDate: cols.moveCol>=0?String(r[cols.moveCol]||"").trim():"",
+      owner: cols.ownerCol>=0?String(r[cols.ownerCol]||"").trim():"", fileId:"" };
+    items.push(it); total+=it.amount;
+  }
+  const rec={ items, rowCount:items.length, total:Math.round(total*100)/100, recognized:cols };
+  const sum=consignRiskSummary(items);
+  rec.nearDanger=sum.nearDanger; rec.nearWarn=sum.nearWarn; rec.slow=sum.slow; rec.longAgeAmt=sum.longAgeAmt;
+  return rec;
+}
+function autoDetectConsignTpl(rows){
+  const hr=firstHeaderRow(rows); const header=(hr>=0?rows[hr]:rows[0])||[];
+  const line=(header||[]).join(' ');
+  for(const t of state.consignTemplates){ if(t.detect&&t.detect.length&&t.detect.every(k=>line.indexOf(k)>=0)) return t; }
+  return null;
+}
+function riskItemHtml(it, type, now){
+  const r=computeConsignRisk(it,now);
+  const tag = type==='near' ? (r.nearExpiry==='danger'?'<span class="badge danger">严重</span>':'<span class="badge warn">预警</span>')
+    : type==='slow' ? '<span class="badge warn">慢动销</span>'
+    : '<span class="badge danger">长账龄</span>';
+  const dateInfo = type==='near' ? ('效期 '+esc(it.expiryDate)+'（剩 '+(r.expM!=null?r.expM:'?')+' 月）')
+    : type==='slow' ? ('最近动销 '+esc(it.lastMoveDate)+'（'+(r.mvM!=null?r.mvM:'?')+' 月前）')
+    : ('入库 '+esc(it.inboundDate)+'（账龄 '+(r.ageM!=null?r.ageM:'?')+' 月）');
+  return `<div class="card" style="margin-bottom:8px">
+    <div class="item-row">
+      <div class="item-main">
+        <div class="item-title">${esc(it.productCode)}${it.productName?(' · '+esc(it.productName)):''} ${tag}</div>
+        <div class="item-sub">${esc(it.hospital)} ｜ ${esc(it.owner||'未指定责任人')} ｜ 批号 ${esc(it.batch||'—')} ｜ 数量 ${it.quantity||0}</div>
+        <div class="item-sub">${dateInfo} ｜ 金额 <b style="color:#e2554f">¥${it.amount.toLocaleString()}</b></div>
+      </div>
+      <div class="item-actions">
+        ${it.owner?('<button class="icon-btn sm" data-cowner="'+esc(it.owner)+'" title="只看该业务员">👤</button>'):''}
+        <button class="icon-btn sm danger" data-cdel="${it.id}" title="删除">✕</button>
+      </div>
+    </div></div>`;
+}
+function riskSectionHtml(title, list, type, now){
+  if(!list.length) return '';
+  return `<div class="item-title" style="margin:14px 0 6px">${title}（${list.length}）</div>`+list.map(x=>riskItemHtml(x,type,now)).join('');
+}
+
+/* ---------- 寄售库存：视图 ---------- */
+function renderConsign(){
+  const root=document.getElementById('view-consign'); if(!root) return;
+  const now=new Date();
+  if(consignImportPanel){
+    const p=consignImportPanel;
+    const tplOpts=state.consignTemplates.map(t=>`<option value="${t.id}" ${p.hospital===t.id?'selected':''}>${esc(t.name)}</option>`).join('');
+    let html=`<div class="view-head"><span class="sub">导入寄售盘点表</span></div>
+     <div class="card">
+       <div class="settle-form">
+         <div class="field"><label>医院（选择解析模板）</label><select id="ci-hosp">${tplOpts}<option value="__new__" ${p.hospital==='__new__'?'selected':''}>＋ 新增 / 编辑医院模板</option></select></div>
+         <div class="field"><label>盘点期（如 202607）</label><input id="ci-per" value="${esc(p.period||'')}" placeholder="202607"></div>
+         <div class="field"><label>默认责任人（业务员）</label><input id="ci-owner" value="${esc(p.owner||'')}" placeholder="留空则取表中业务员列"></div>
+         <div class="field" style="grid-column:1/-1"><label>盘点表文件（xlsx / csv）</label><input type="file" id="ci-file" accept=".xlsx,.xls,.csv"></div>
+       </div>`;
+    if(p.hospital==='__new__'||!state.consignTemplates.length){ if(!consignTplEdit) consignTplEdit={name:'',headerRow:1,codeCol:'',qtyCol:'',priceCol:'',inboundCol:'',expiryCol:'',moveCol:'',ownerCol:'',amountMode:'qtyPrice',detect:''}; html+=renderConsignTplEditor(); }
+    if(p.parsed){
+      const pp=p.parsed; const mb=(pp.fileBytes?pp.fileBytes.length:0)/1048576; const rs=pp.recognized;
+      html+=`<div class="card import-preview" style="margin-top:10px">
+        <div class="item-title">解析预览 · ${pp.rowCount} 条库存明细</div>
+        <div class="item-sub">医院：<b>${esc(p.hospitalName||'')}</b> ｜ 盘点期：<b>${esc(pp.period)}</b></div>
+        <div class="item-sub">在库金额合计：<b style="color:#e2554f;font-size:16px">¥${pp.total.toLocaleString()}</b></div>
+        <div class="item-sub">近效期 严重 ${pp.nearDanger} / 预警 ${pp.nearWarn} ｜ 慢动销 ${pp.slow} ｜ 长账龄金额 ¥${pp.longAgeAmt.toLocaleString()}</div>
+        <div class="item-sub">识别列：编码 ${(rs.codeCol+1||0)} ｜ 数量 ${(rs.qtyCol+1||0)} ｜ 效期 ${(rs.expiryCol+1||0)} ｜ 入库 ${(rs.inboundCol+1||0)} ｜ 动销 ${(rs.moveCol+1||0)} ｜ 业务员 ${(rs.ownerCol+1||0)}</div>
+        <div class="item-sub">源文件：<b>${esc(pp.fileName)}</b>（${mb.toFixed(2)} MB）</div>
+        ${pp.rowCount?'':`<div class="file-warn">没有识别到任何「耗材编码」行。请到「医院模板」把这家医院的「耗材编码列」「表头所在行」填对，再重新选文件。</div>`}
+        <div class="edit-actions"><button class="btn" data-cancel-cimport>取消</button><button class="btn btn-primary" data-confirm-cimport>确认导入（覆盖同院同期）</button></div>
+      </div>`;
+    }
+    html+=`</div>`;
+    root.innerHTML=html;
+    const hs=root.querySelector('#ci-hosp'); if(hs) hs.onchange=()=>{ p.hospital=hs.value; p.parsed=null; if(p.hospital!=='__new__'&&p.file) reparseConsign(); else if(p.hospital==='__new__') consignTplEdit=null; renderConsign(); };
+    const pe=root.querySelector('#ci-per'); if(pe) pe.oninput=()=>{ p.period=pe.value.trim(); };
+    const ow=root.querySelector('#ci-owner'); if(ow) ow.oninput=()=>{ p.owner=ow.value.trim(); };
+    const fi=root.querySelector('#ci-file'); if(fi) fi.onchange=(e)=>{ const f=e.target.files[0]; if(f){ p.file=f; p.parsed=null; reparseConsign(); } };
+    if(p.hospital==='__new__'||!state.consignTemplates.length) bindConsignTplEditor(root);
+    const c1=root.querySelector('[data-cancel-cimport]'); if(c1) c1.onclick=()=>{ consignImportPanel=null; renderConsign(); };
+    const c2=root.querySelector('[data-confirm-cimport]'); if(c2) c2.onclick=confirmConsignImport;
+    bindItemEvents(root);
+    refitCharts(root); bindChartResize(root);
+    return;
+  }
+
+  let items=state.consign||[];
+  if(consignFilter.hospital) items=items.filter(x=>x.hospital===consignFilter.hospital);
+  if(consignFilter.owner) items=items.filter(x=>x.owner===consignFilter.owner);
+  const sum=consignRiskSummary(items, now);
+  const hospitals=[...new Set((state.consign||[]).map(x=>x.hospital))].sort();
+  let html=`<div class="view-head"><span class="sub">寄售库存 · 近效期 / 慢动销 / 长账龄 · 按业务员落责任</span></div>`;
+  html+=`<div class="toolbar">
+    <button class="btn btn-primary" data-cimport>📥 导入盘点表</button>
+    <button class="btn" data-caddtoggle>＋ 手动新增</button>
+    <button class="btn" data-ctplmanage>⚙ 医院模板（${state.consignTemplates.length}）</button>
+    <select id="c-hosp-filter" class="btn" style="padding:9px 12px"><option value="">全部医院（${hospitals.length}）</option>${hospitals.map(h=>`<option value="${esc(h)}" ${consignFilter.hospital===h?'selected':''}>${esc(h)}</option>`).join('')}</select>
+    ${consignFilter.hospital||consignFilter.owner?`<button class="btn btn-ghost" data-cfilterclear>清除筛选</button>`:''}
+  </div>`;
+  html+=`<div class="stat-grid">
+    <div class="stat"><div class="v">¥${sum.total.toLocaleString()}</div><div class="k">在库金额合计</div></div>
+    <div class="stat"><div class="v" style="color:#e2554f">${sum.nearDanger+sum.nearWarn}</div><div class="k">近效期预警（严重 ${sum.nearDanger}）</div></div>
+    <div class="stat"><div class="v" style="color:#e2554f">${sum.slow}</div><div class="k">慢动销（笔）</div></div>
+    <div class="stat"><div class="v" style="color:#e2554f">¥${sum.longAgeAmt.toLocaleString()}</div><div class="k">长账龄资金占用</div></div>
+  </div>`;
+
+  if(!items.length){
+    html+=`<div class="card empty">还没有寄售库存数据。点「导入盘点表」选择医院的盘点 xlsx（含 耗材编码 / 效期 / 入库日期 / 最近动销 / 业务员 等列），或手动新增一条。</div>`;
+  } else {
+    const near=items.filter(x=>computeConsignRisk(x,now).nearExpiry).sort((a,b)=> (computeConsignRisk(a,now).expM!=null?computeConsignRisk(a,now).expM:999)-(computeConsignRisk(b,now).expM!=null?computeConsignRisk(b,now).expM:999));
+    html+=riskSectionHtml('近效期预警', near, 'near', now);
+    const slow=items.filter(x=>computeConsignRisk(x,now).slowMove).sort((a,b)=> (computeConsignRisk(b,now).mvM||0)-(computeConsignRisk(a,now).mvM||0));
+    html+=riskSectionHtml('慢动销识别', slow, 'slow', now);
+    const longAge=items.filter(x=>computeConsignRisk(x,now).longAge).sort((a,b)=> computeConsignRisk(b,now).amount-computeConsignRisk(a,now).amount);
+    html+=riskSectionHtml('长账龄资金占用', longAge, 'age', now);
+  }
+
+  if(consignTplManage){
+    html+=`<div class="card"><div class="item-title">寄售库存医院模板</div>
+      <div class="item-sub">每家医院一套解析规则：表头行 + 关键列。导入时选对应医院即按此解析；列号留空会自动识别并回填。</div>
+      <div class="tpl-list">`;
+    if(!state.consignTemplates.length) html+=`<div class="item-sub">还没有模板，点下方「新增模板」。</div>`;
+    state.consignTemplates.forEach(t=>{
+      const colName=(c)=>{ if(c===''||c==null||c===0||c==='0') return '—'; const s=String(c).trim(); const n=/^\d+$/.test(s)?parseInt(s,10):(/^[A-Za-z]+$/.test(s)?colLetterToIdx(s)+1:0); return n>0?('第 '+n+' 列'):'—'; };
+      html+=`<div class="tpl-item"><div><div class="sel-hospital">${esc(t.name)}</div><div class="meta">编码：${colName(t.codeCol)} ｜ 数量：${colName(t.qtyCol)} ｜ 效期：${colName(t.expiryCol)} ｜ 入库：${colName(t.inboundCol)} ｜ 动销：${colName(t.moveCol)} ｜ 业务员：${colName(t.ownerCol)}</div></div>
+        <div class="item-actions"><button class="icon-btn sm" data-ctpled="${t.id}">✎</button><button class="icon-btn sm danger" data-ctpdel="${t.id}">✕</button></div></div>`;
+    });
+    html+=`</div><div class="edit-actions"><button class="btn" data-ctplmanage-close>收起</button><button class="btn btn-primary" data-ctpladd>＋ 新增模板</button></div></div>`;
+  }
+  if(consignTplEdit) html+=renderConsignTplEditor();
+  if(editing['cAdd']){
+    const gv=t=>`<div class="field"><label>${t[0]}</label><input id="${t[1]}" ${t[2]||''} placeholder="${t[3]||''}"></div>`;
+    html+=`<div class="card"><div class="settle-form">
+      ${gv(['医院','c-hosp','','如：省医'])}
+      ${gv(['盘点期','c-per','','202607'])}
+      ${gv(['耗材编码','c-code','','如 842014'])}
+      ${gv(['品名','c-name','',''])}
+      ${gv(['批号','c-batch','',''])}
+      ${gv(['数量','c-qty','type="number" step="0.01"',''])}
+      ${gv(['单价','c-price','type="number" step="0.01"',''])}
+      ${gv(['业务员','c-owner','',''])}
+      ${gv(['入库日期','c-inbound','','YYYY-MM-DD'])}
+      ${gv(['效期','c-expiry','','YYYY-MM-DD'])}
+      ${gv(['最近动销','c-move','','YYYY-MM-DD'])}
+      <div class="edit-actions"><button class="btn" data-cancel="cAdd">取消</button><button class="btn btn-primary" data-caddsave>保存</button></div>
+    </div></div>`;
+  }
+
+  root.innerHTML=html;
+  const impBtn=root.querySelector('[data-cimport]'); if(impBtn) impBtn.onclick=()=>{ consignImportPanel={hospital:'',period:'',owner:''}; renderConsign(); };
+  const tpmBtn=root.querySelector('[data-ctplmanage]'); if(tpmBtn) tpmBtn.onclick=()=>{ consignTplManage=!consignTplManage; renderConsign(); };
+  const tpmClose=root.querySelector('[data-ctplmanage-close]'); if(tpmClose) tpmClose.onclick=()=>{ consignTplManage=false; renderConsign(); };
+  const tplAdd=root.querySelector('[data-ctpladd]'); if(tplAdd) tplAdd.onclick=()=>{ consignTplManage=true; consignTplEdit={name:'',headerRow:1,codeCol:'',qtyCol:'',priceCol:'',inboundCol:'',expiryCol:'',moveCol:'',ownerCol:'',amountMode:'qtyPrice',detect:''}; renderConsign(); };
+  root.querySelectorAll('[data-ctpled]').forEach(b=>b.onclick=()=>{ const id=b.getAttribute('data-ctpled'); const t=state.consignTemplates.find(x=>x.id===id); if(t){ consignTplManage=true; consignTplEdit={...t, detect:(t.detect||[]).join('，')}; } renderConsign(); });
+  root.querySelectorAll('[data-ctpdel]').forEach(b=>b.onclick=()=>{ const id=b.getAttribute('data-ctpdel'); if(confirm('删除该医院模板？')){ state.consignTemplates=state.consignTemplates.filter(x=>x.id!==id); save(); renderConsign(); toast('已删除模板'); } });
+  const addT=root.querySelector('[data-caddtoggle]'); if(addT) addT.onclick=()=>{ editing['cAdd']=!editing['cAdd']; renderConsign(); };
+  const addS=root.querySelector('[data-caddsave]'); if(addS) addS.onclick=()=>{
+    const gv=(id)=>{ const el=document.getElementById(id); return el?el.value.trim():''; };
+    const qty=parseAmount(gv('c-qty')), price=parseAmount(gv('c-price'));
+    const it={ id:uid(), hospital:gv('c-hosp'), period:gv('c-per'), productCode:gv('c-code'), productName:gv('c-name'), batch:gv('c-batch'),
+      quantity:qty, unitPrice:price, amount:Math.round(qty*price*100)/100,
+      inboundDate:gv('c-inbound'), expiryDate:gv('c-expiry'), lastMoveDate:gv('c-move'), owner:gv('c-owner'), created:Date.now() };
+    if(!it.hospital||!it.productCode){ toast('请填写医院和耗材编码'); return; }
+    state.consign.push(it); delete editing['cAdd']; save(); renderConsign(); toast('已新增');
+  };
+  const hf=root.querySelector('#c-hosp-filter'); if(hf) hf.onchange=()=>{ consignFilter.hospital=hf.value||null; renderConsign(); };
+  const fc=root.querySelector('[data-cfilterclear]'); if(fc) fc.onclick=()=>{ consignFilter={hospital:null,owner:null}; renderConsign(); };
+  root.querySelectorAll('[data-cdel]').forEach(b=>b.onclick=()=>{ if(confirm('删除这条库存记录？')){ const id=b.getAttribute('data-cdel'); const rec=state.consign.find(x=>x.id===id); if(rec) markTomb(id); state.consign=state.consign.filter(x=>x.id!==id); save(); renderConsign(); toast('已删除'); } });
+  root.querySelectorAll('[data-cowner]').forEach(b=>b.onclick=()=>{ consignFilter.owner=b.getAttribute('data-cowner'); renderConsign(); });
+  bindConsignTplEditor(root);
+  refitCharts(root); bindChartResize(root);
+  bindItemEvents(root);
+}
+
+/* ---------- 寄售库存：模板编辑器 / 解析导入 ---------- */
+function renderConsignTplEditor(){
+  const te=consignTplEdit||{name:'',headerRow:1,codeCol:'',qtyCol:'',priceCol:'',inboundCol:'',expiryCol:'',moveCol:'',ownerCol:'',amountMode:'qtyPrice',detect:''};
+  return `<div class="card" style="margin-top:10px">
+    <div class="item-title">${te.id?'编辑':'新增'}寄售库存医院模板</div>
+    <div class="settle-form">
+      <div class="field"><label>医院名称</label><input id="ct-name" value="${esc(te.name)}"></div>
+      <div class="field"><label>表头所在行</label><input id="ct-hr" type="number" value="${te.headerRow||1}"></div>
+      <div class="field"><label>耗材编码列</label><input id="ct-code" value="${esc(te.codeCol||'')}" placeholder="如 A 或 1"></div>
+      <div class="field"><label>数量列</label><input id="ct-qty" value="${esc(te.qtyCol||'')}" placeholder="如 C 或 3"></div>
+      <div class="field"><label>单价列</label><input id="ct-price" value="${esc(te.priceCol||'')}" placeholder="留空则金额=数量×单价"></div>
+      <div class="field"><label>入库日期列</label><input id="ct-inbound" value="${esc(te.inboundCol||'')}" placeholder="如 E 或 5"></div>
+      <div class="field"><label>效期列</label><input id="ct-expiry" value="${esc(te.expiryCol||'')}" placeholder="如 F 或 6"></div>
+      <div class="field"><label>最近动销列</label><input id="ct-move" value="${esc(te.moveCol||'')}" placeholder="如 G 或 7"></div>
+      <div class="field"><label>业务员列</label><input id="ct-owner" value="${esc(te.ownerCol||'')}" placeholder="如 H 或 8"></div>
+      <div class="field" style="grid-column:1/-1"><label>识别关键词</label><input id="ct-detect" value="${esc(Array.isArray(te.detect)?te.detect.join('，'):te.detect||'')}" placeholder="耗材编码，效期"></div>
+    </div>
+    <div class="edit-actions"><button class="btn" data-ct-cancel>取消</button><button class="btn btn-primary" data-ct-save>保存模板</button></div>
+  </div>`;
+}
+function bindConsignTplEditor(root){
+  const c=root.querySelector('[data-ct-cancel]'); if(c) c.onclick=()=>{ consignTplEdit=null; renderConsign(); };
+  const s=root.querySelector('[data-ct-save]'); if(s) s.onclick=()=>{
+    const toNum=(v)=>{ if(/^[A-Za-z]+$/.test(v)) return colLetterToIdx(v)+1; const n=parseInt(v,10); return isNaN(n)?0:n; };
+    const gv=(id)=>{ const el=document.getElementById(id); return el?String(el.value||'').trim():''; };
+    const te=consignTplEdit||{};
+    te.name=gv('ct-name'); te.headerRow=Math.max(0,parseInt(gv('ct-hr'),10)||1);
+    te.codeCol=toNum(gv('ct-code')); te.qtyCol=toNum(gv('ct-qty')); te.priceCol=toNum(gv('ct-price'));
+    te.inboundCol=toNum(gv('ct-inbound')); te.expiryCol=toNum(gv('ct-expiry')); te.moveCol=toNum(gv('ct-move')); te.ownerCol=toNum(gv('ct-owner'));
+    te.amountMode='qtyPrice';
+    te.detect=gv('ct-detect').split(/[\s，,]+/).map(x=>x.trim()).filter(Boolean);
+    if(!te.name){ toast('请填写医院名称'); return; }
+    if(te.id){ const i=state.consignTemplates.findIndex(t=>t.id===te.id); if(i>=0) state.consignTemplates[i]={...te}; }
+    else { te.id='ct_'+Date.now(); state.consignTemplates.push({...te}); }
+    consignTplEdit=null; save(); renderConsign(); toast('已保存医院模板');
+  };
+}
+async function reparseConsign(){
+  const p=consignImportPanel; if(!p||!p.file) return;
+  try{
+    const buf=await p.file.arrayBuffer();
+    let rows;
+    if(p.file.name.toLowerCase().endsWith('.csv')) rows=parseCsv(new TextDecoder().decode(buf));
+    else rows=await parseXlsxBuf(buf);
+    if(!rows||!rows.length){ toast('未能解析出表格内容'); p.parsed=null; return; }
+    let tpl=state.consignTemplates.find(t=>t.id===p.hospital); let tplName=tpl?tpl.name:'';
+    if(!tpl){ tpl=autoDetectConsignTpl(rows); tplName=tpl?tpl.name:'（未匹配模板）'; }
+    if(!tpl){ toast('未选择医院模板且无法自动识别，请先选医院或新增模板'); p.parsed=null; return; }
+    if(!p.period){ toast('请填写盘点期（如 202607）'); p.parsed=null; return; }
+    const per=parsePeriod(p.period, new Date().getFullYear());
+    if(!per){ toast('盘点期格式不正确，应为 202607 或 2026-07'); p.parsed=null; return; }
+    const parsed=parseConsignByTemplate(rows, tpl);
+    parsed.tplName=tplName; parsed.tplId=tpl.id; parsed.period=per;
+    let filled=false;
+    Object.keys(parsed.recognized).forEach(f=>{ if(!tpl[f] && parsed.recognized[f]>=0){ tpl[f]=parsed.recognized[f]+1; filled=true; } });
+    if(filled) save();
+    if(p.owner){ parsed.items.forEach(it=>{ if(!it.owner) it.owner=p.owner; }); }
+    parsed.fileName=p.file.name; parsed.fileBytes=new Uint8Array(buf);
+    p.parsed=parsed; p.hospitalName=tplName;
+    renderConsign();
+    if(!parsed.rowCount) toast('没有识别到耗材编码行：请检查模板的「耗材编码列」和「表头所在行」');
+    else if(filled) toast('已按表头识别列号并回填模板');
+  }catch(e){ console.error(e); toast('解析失败：'+(e&&e.message?e.message:e)); }
+}
+function confirmConsignImport(){
+  const p=consignImportPanel; if(!p||!p.parsed) return;
+  const pp=p.parsed;
+  pp.items.forEach(it=>{ it.period=pp.period; it.hospital=pp.tplName; it.created=Date.now(); });
+  const old=state.consign.filter(r=>r.hospital===pp.tplName && r.period===pp.period);
+  old.forEach(o=>{ if(o.id) markTomb(o.id); });
+  state.consign=state.consign.filter(r=>!(r.hospital===pp.tplName && r.period===pp.period));
+  state.consign=state.consign.concat(pp.items);
+  consignImportPanel=null; save(); renderAll();
+  toast('已导入 '+pp.tplName+' '+pp.period+' 库存 '+pp.items.length+' 条');
+}
+
+/* ---------- 业务员责任：风险敞口看板 ---------- */
+function renderRep(){
+  const root=document.getElementById('view-rep'); if(!root) return;
+  const now=new Date();
+  const items=state.consign||[];
+  const byOwner={}; items.forEach(it=>{ const o=it.owner||'未指定责任人'; (byOwner[o]=byOwner[o]||[]).push(it); });
+  const owners=Object.keys(byOwner).sort((a,b)=> consignRiskSummary(byOwner[b],now).total - consignRiskSummary(byOwner[a],now).total);
+  const totalAmt=consignRiskSummary(items,now).total;
+  let html=`<div class="view-head"><span class="sub">业务员责任 · 个体库存风险敞口（责任到人）</span></div>`;
+  html+=`<div class="stat-grid">
+    <div class="stat"><div class="v">¥${totalAmt.toLocaleString()}</div><div class="k">在库金额合计</div></div>
+    <div class="stat"><div class="v">${owners.length}</div><div class="k">涉及业务员（人）</div></div>
+  </div>`;
+  html+=`<div class="hint" style="margin:0 0 10px">把每家医院的寄售库存风险敞口落实到具体业务员。点卡片可只看作该业务员的库存明细（跳到「寄售库存」按责任人筛选）。</div>`;
+  if(!owners.length){ html+=`<div class="card empty">还没有寄售库存数据，无法统计业务员责任。请先到「寄售库存」导入或新增。</div>`; }
+  else{
+    const maxAmt=Math.max(1,...owners.map(o=>consignRiskSummary(byOwner[o],now).total));
+    owners.forEach(o=>{
+      const list=byOwner[o]; const s=consignRiskSummary(list,now); const hosps=[...new Set(list.map(x=>x.hospital))];
+      const wpct=Math.round(s.total/maxAmt*100);
+      html+=`<div class="card" data-rown="${esc(o)}" style="cursor:pointer">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <div class="item-title">${esc(o)}</div>
+          <div style="font-weight:700;color:#e2554f;white-space:nowrap">¥${s.total.toLocaleString()}</div>
+        </div>
+        <div class="item-sub">近效期 严重 ${s.nearDanger} / 预警 ${s.nearWarn} ｜ 慢动销 ${s.slow} ｜ 长账龄 ¥${s.longAgeAmt.toLocaleString()} ｜ 覆盖 ${hosps.length} 家医院</div>
+        <div class="risk-bar"><i style="width:${wpct}%"></i></div>
+      </div>`;
+    });
+  }
+  root.innerHTML=html;
+  root.querySelectorAll('[data-rown]').forEach(b=>b.onclick=()=>{ consignFilter={hospital:null, owner:b.getAttribute('data-rown')}; setView('consign'); renderConsign(); });
+  refitCharts(root); bindChartResize(root);
+  bindItemEvents(root);
+}
+
+/* ---------- 启动 ---------- */
+window.addEventListener('DOMContentLoaded', ()=>{
+  const av=document.getElementById('appVer'); if(av) av.textContent=APP_VERSION;
+  initState();
+  bindNav();
+  if(isSyncOn()){ setSyncStatus("同步中…","sb-busy"); pullSync().catch(e=>{ console.warn(e); setSyncStatus("同步失败","sb-err"); }); }
+  else setSyncStatus("未同步");
+  renderAll();
+  setView('overview');
+  setInterval(()=>{ if(autoEnabled() && document.visibilityState!=="hidden") autoSync(); }, 60000);
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && autoEnabled()) autoSync(); });
+  window.addEventListener('pagehide', flushPendingPush);
+});
+
+
+</script>
+</body>
+</html>
